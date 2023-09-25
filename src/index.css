@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.triangle {
+  clip-path: polygon(35% 52%, 100% 100%, 100% 0);
+}
+
+.owner {
+  @apply flex-row-reverse;
+}
+
+.owner .message-content {
+  @apply items-end;
+}
+
+.owner-message {
+  @apply rounded-l-lg rounded-br-lg bg-blue-500 text-white;
+}
+
+.opposite-text {
+  @apply bg-white rounded-r-lg rounded-bl-lg;
+}
