@@ -6,14 +6,17 @@ import AuthProvider from "./contextAPIs/AuthProvider";
 import ChatProvider from "./contextAPIs/ChatProvider";
 import { RouterProvider } from "react-router-dom";
 import PartnerProvider from "./contextAPIs/PartnerProvider";
+import RequirementsProvider from "./contextAPIs/RequirementsProvider";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AuthProvider>
       <PartnerProvider>
-        <ChatProvider>
-          <RouterProvider router={router} />
-        </ChatProvider>
+        <RequirementsProvider>
+          <ChatProvider>
+            <RouterProvider router={router} />
+          </ChatProvider>
+        </RequirementsProvider>
       </PartnerProvider>
     </AuthProvider>
   </React.StrictMode>

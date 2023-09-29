@@ -11,7 +11,7 @@ export const PartnerContext = createContext();
 
 const PartnerProvider = ({ children }) => {
   const { user, isPartner, isAdmin } = useContext(AuthContext);
-  const [allRequirements, setAllRequirements] = useState([]);
+
   const [partners, setPartners] = useState([]);
   const [refetch, setRefetch] = useState(false);
   const [queryText, setQueryText] = useState("Verified");
@@ -19,7 +19,6 @@ const PartnerProvider = ({ children }) => {
   const [totalRequest, setTotalRequest] = useState(0);
   const [loadingPartnerData, setLoadingPartnerData] = useState(true);
   const [partnerDetails, setPartnerDetails] = useState({});
-  const [myRequirements, setMyRequirements] = useState([]);
 
   // loading all partners data
   useEffect(() => {
@@ -64,31 +63,6 @@ const PartnerProvider = ({ children }) => {
     isPartner && loadData(user);
   }, [user, isPartner, refetch]);
 
-  // fetching all requirements individual partner
-  useEffect(() => {
-    const loadRequirements = async () => {
-      const snapshot = await getDocs(
-        query(requirementsCollection, where("providerUid", "==", user.uid))
-      );
-      const list = snapshot.docs.map((doc) => doc.data());
-      setMyRequirements(list);
-    };
-
-    isPartner && loadRequirements();
-  }, [user, isPartner, refetch]);
-
-  // fetching all requirements for admin dashboard
-  useEffect(() => {
-    const loadRequirements = async () => {
-      const snapshot = await getDocs(requirementsCollection);
-
-      const list = snapshot.docs.map((doc) => doc.data());
-      setAllRequirements(list);
-    };
-
-    isAdmin && loadRequirements();
-  }, [isAdmin, refetch]);
-
   const partnersInfo = {
     partners,
     setPartners,
@@ -102,8 +76,6 @@ const PartnerProvider = ({ children }) => {
     loadingPartnerData,
     partnerDetails,
     setPartnerDetails,
-    myRequirements,
-    allRequirements,
   };
   return (
     <PartnerContext.Provider value={partnersInfo}>

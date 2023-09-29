@@ -1,20 +1,26 @@
 import { createBrowserRouter } from "react-router-dom";
 import Main from "../layouts/Main";
 import Dashboard from "../layouts/Dashboard";
-import OnboardingForm from "../pages/register/OnboardingForm";
-import Login from "../pages/login/Login";
-import CustomerChat from "../pages/communication/CustomerChat";
-import MyServices from "../pages/dashboard/partnerDashboard/myServices/MyServices";
 import PrivetRouter from "./PrivetRouter";
-import Support from "../pages/dashboard/partnerDashboard/support/Support";
-import PartnerProfile from "../pages/dashboard/partnerDashboard/PartnerProfile/PartnerProfile";
+import LocalPartners from "../pages/dashboard/adminDashboard/localPartners/LocalPartners";
+import CustomerChat from "../pages/dashboard/adminDashboard/communication/CustomerChat";
+import MyServices from "../pages/dashboard/partnerDashboard/myServices/MyServices";
 import PartnerRoute from "./PartnerRoute";
-import DriverOnBoarding from "../pages/onBoardingForm/driverOnBoarding/DriverOnBoarding";
-import LocalPartners from "../pages/localPartners/LocalPartners";
-import AllRequirements from "../pages/allRequirements/AllRequirements";
-import HotelBookings from "../pages/hotelBookings/HotelBookings";
-import FoodOrders from "../pages/foodOrders/FoodOrders";
-import Drivers from "./../pages/drivers/Drivers";
+import PartnerProfile from "../pages/dashboard/partnerDashboard/PartnerProfile/PartnerProfile";
+import Support from "../pages/dashboard/partnerDashboard/support/Support";
+import PartnerOnboarding from "../pages/form/PartnerOnboarding";
+import Login from "../pages/login/Login";
+import DriverOnBoarding from "../pages/form/DriverOnBoarding";
+import TravelBookings from "./../pages/dashboard/adminDashboard/clientOrders/travelBookings/TravelBookings";
+import FoodOrders from "../pages/dashboard/adminDashboard/clientOrders/foodOrders/FoodOrders";
+import LocalServices from "../pages/dashboard/adminDashboard/ourServices/localServices/LocalServices";
+import RoomServices from "./../pages/dashboard/adminDashboard/ourServices/roomServices/RoomServices";
+import TravelServices from "./../pages/dashboard/adminDashboard/ourServices/travelServices/TravelServices";
+import FoodServices from "./../pages/dashboard/adminDashboard/ourServices/foodServices/FoodServices";
+import RoomBookings from "../pages/dashboard/adminDashboard/clientOrders/roomBookings/RoomBookings";
+import Restaurants from "./../pages/dashboard/adminDashboard/ourPartners/restaurants/Restaurants";
+import Hotels from "./../pages/dashboard/adminDashboard/ourPartners/hotels/Hotels";
+import Drivers from "../pages/dashboard/adminDashboard/ourPartners/drivers/drivers";
 
 export const router = createBrowserRouter([
   {
@@ -33,19 +39,22 @@ export const router = createBrowserRouter([
       </PrivetRouter>
     ),
     children: [
+      /* =================================================
+                          Client's Orders
+      =================================================*/
       {
-        path: "/dashboard/all-requirements",
+        path: "/dashboard/room-bookings",
         element: (
           <PrivetRouter>
-            <AllRequirements />
+            <RoomBookings />
           </PrivetRouter>
         ),
       },
       {
-        path: "/dashboard/hotel-bookings",
+        path: "/dashboard/travel-bookings",
         element: (
           <PrivetRouter>
-            <HotelBookings />
+            <TravelBookings />
           </PrivetRouter>
         ),
       },
@@ -54,6 +63,62 @@ export const router = createBrowserRouter([
         element: (
           <PrivetRouter>
             <FoodOrders />
+          </PrivetRouter>
+        ),
+      },
+
+      /* =================================================
+                          Our Services
+      =================================================*/
+      {
+        path: "/dashboard/local-services",
+        element: (
+          <PrivetRouter>
+            <LocalServices />
+          </PrivetRouter>
+        ),
+      },
+      {
+        path: "/dashboard/room-services",
+        element: (
+          <PrivetRouter>
+            <RoomServices />
+          </PrivetRouter>
+        ),
+      },
+      {
+        path: "/dashboard/travel-services",
+        element: (
+          <PrivetRouter>
+            <TravelServices />
+          </PrivetRouter>
+        ),
+      },
+      {
+        path: "/dashboard/food-services",
+        element: (
+          <PrivetRouter>
+            <FoodServices />
+          </PrivetRouter>
+        ),
+      },
+
+      /* =================================================
+                         Our Partners
+      =================================================*/
+      {
+        path: "/dashboard/restaurants",
+        element: (
+          <PrivetRouter>
+            <Restaurants />
+          </PrivetRouter>
+        ),
+      },
+      {
+        path: "/dashboard/hotels",
+        element: (
+          <PrivetRouter>
+            <Hotels />
           </PrivetRouter>
         ),
       },
@@ -108,8 +173,8 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: "/register",
-    element: <OnboardingForm />,
+    path: "/partner-onboarding",
+    element: <PartnerOnboarding />,
   },
   {
     path: "/login",

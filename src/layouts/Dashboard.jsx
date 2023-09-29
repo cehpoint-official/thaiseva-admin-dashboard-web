@@ -27,13 +27,21 @@ import Diversity1Icon from "@mui/icons-material/Diversity1";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { PartnerContext } from "../contextAPIs/PartnerProvider";
 import { AuthContext } from "../contextAPIs/AuthProvider";
-import AdminDashboard from "../pages/dashboard/AdminDashboard";
-import PartnerDashboard from "../pages/dashboard/PartnerDashboard";
+import AdminDashboard from "../pages/dashboard/adminDashboard/AdminDashboard";
 import PersonIcon from "@mui/icons-material/Person";
 import TaskIcon from "@mui/icons-material/Task";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
-import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+import BeenhereIcon from "@mui/icons-material/Beenhere";
+import RestaurantIcon from "@mui/icons-material/Restaurant";
+import HandshakeIcon from "@mui/icons-material/Handshake";
+import ApartmentIcon from "@mui/icons-material/Apartment";
+import LocalHotelIcon from "@mui/icons-material/LocalHotel";
+import TravelExploreIcon from "@mui/icons-material/TravelExplore";
+import LuggageIcon from "@mui/icons-material/Luggage";
+import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import FastfoodIcon from "@mui/icons-material/Fastfood";
+import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
+import PartnerDashboard from "../pages/dashboard/partnerDashboard/PartnerDashboard";
 
 const drawerWidth = 220;
 
@@ -48,8 +56,6 @@ function Dashboard(props) {
   const [openCommuincationMenu, setOpenCommunicationMenu] =
     React.useState(false);
   const [activeMenu, setActiveMenu] = React.useState("");
-  const [openComunnicationChild, setOpenCommunicationChild] =
-    React.useState(false);
 
   const navigate = useNavigate(); // to navigate the user
   const location = useLocation(); // to track the url
@@ -115,6 +121,65 @@ function Dashboard(props) {
     ];
   }
 
+  const clientOrderRoute = [
+    {
+      url: "/dashboard/room-bookings",
+      lable: "Room Bookings",
+      icon: <BeenhereIcon />,
+    },
+    {
+      url: "/dashboard/travel-bookings",
+      lable: "Travel Bookings",
+      icon: <TravelExploreIcon />,
+    },
+    {
+      url: "/dashboard/food-orders",
+      lable: "Food Orders",
+      icon: <FastfoodIcon />,
+    },
+  ];
+  const ourServiceRoute = [
+    {
+      url: "/dashboard/local-services",
+      lable: "Local Services",
+      icon: <ManageAccountsIcon />,
+    },
+    {
+      url: "/dashboard/room-services",
+      lable: "Room Services",
+      icon: <LocalHotelIcon />,
+    },
+    {
+      url: "/dashboard/travel-services",
+      lable: "Travel Services",
+      icon: <LuggageIcon />,
+    },
+    {
+      url: "/dashboard/food-services",
+      lable: "Food Services",
+      icon: <FastfoodIcon />,
+    },
+  ];
+
+  const ourPartnerRoute = [
+    {
+      url: "/dashboard/restaurants",
+      lable: "Restaurants",
+      icon: <RestaurantIcon />,
+    },
+    { url: "/dashboard/hotels", lable: "Hotels", icon: <ApartmentIcon /> },
+    {
+      url: "/dashboard/drivers",
+      lable: "Drivers",
+      icon: <DirectionsCarIcon />,
+    },
+    {
+      url: "/dashboard/local-partners",
+      lable: "Local Partners",
+      icon: <HandshakeIcon />,
+    },
+  ];
+
   const handleLogOut = () => {
     logOut()
       .then(() => {
@@ -124,7 +189,7 @@ function Dashboard(props) {
   };
 
   const drawer = (
-    <div className="bg-[blue] text-white min-h-full h-fit">
+    <div className="bg-[blue] text-white min-h-full scrollbar scrollbar-thumb-gray-900 scrollbar-track-gray-100">
       <Toolbar>
         {(isAdmin && "Admin Dashboard") || (isPartner && "Partner Dashboard")}
       </Toolbar>
@@ -135,91 +200,94 @@ function Dashboard(props) {
             {/* partner route with child */}
             {isAdmin && (
               <>
-                <Link to={"/dashboard/all-requirements"}>
+                <Link to={"/dashboard"}>
                   <ListItem
                     sx={{ py: 2 }}
                     className={`justify-between relative py-3 px-4 border-b border-[#b8b8b8b0] ${
-                      location.pathname === "/dashboard/all-requirements"
-                        ? "bg-[#0909dc]"
-                        : ""
+                      location.pathname === "/dashboard" ? "bg-[#0909dc]" : ""
                     }`}
                   >
                     <TaskAltIcon />
-                    <span className="grow ml-2">All Requirements</span>
+                    <span className="grow ml-2">Local Tasks</span>
                     <div
                       className={`triangle h-6 w-6 bg-white absolute -right-1 top-auto z-10 ${
-                        location.pathname === "/dashboard/all-requirements"
-                          ? "block"
-                          : "hidden"
+                        location.pathname === "/dashboard" ? "block" : "hidden"
                       }`}
                     ></div>
                   </ListItem>
                 </Link>
-                <Link to={"/dashboard/hotel-bookings"}>
-                  <ListItem
-                    sx={{ py: 2 }}
-                    className={`justify-between relative py-3 px-4 border-b border-[#b8b8b8b0] ${
-                      location.pathname === "/dashboard/hotel-bookings"
-                        ? "bg-[#0909dc]"
-                        : ""
-                    }`}
-                  >
-                    <BookmarkBorderIcon />
-                    <span className="grow ml-2">Hotel Bookings</span>
-                    <div
-                      className={`triangle h-6 w-6 bg-white absolute -right-1 top-auto z-10 ${
-                        location.pathname === "/dashboard/hotel-bookings"
-                          ? "block"
-                          : "hidden"
+
+                <div className="text-yellow-300 pl-2 text-lg font-bold  py-1 z-10 overflow-hidden border-gray-300 ">
+                  Client&apos;s Orders
+                </div>
+                {clientOrderRoute.map((route) => (
+                  <Link to={route.url} key={route.url}>
+                    <ListItem
+                      sx={{ py: 2 }}
+                      className={`justify-between text-green-200 relative py-3 px-4 border-y border-[#b8b8b8b0] hover:bg-[#0909dc] ${
+                        location.pathname === route.url ? "bg-[#0909dc]" : ""
                       }`}
-                    ></div>
-                  </ListItem>
-                </Link>
-                <Link to={"/dashboard/food-orders"}>
-                  <ListItem
-                    sx={{ py: 2 }}
-                    className={`justify-between relative py-3 px-4 border-b border-[#b8b8b8b0]  ${
-                      location.pathname === "/dashboard/food-orders"
-                        ? "bg-[#0909dc]"
-                        : ""
-                    }`}
-                  >
-                    <FastfoodIcon />
-                    <span className="grow ml-2">Food Orders</span>
-                    <div
-                      className={`triangle h-6 w-6 bg-white absolute -right-1 top-auto z-10 ${
-                        location.pathname === "/dashboard/food-orders"
-                          ? "block"
-                          : "hidden"
-                      }`}
-                    ></div>
-                  </ListItem>
-                </Link>
+                    >
+                      {route.icon}
+                      <span className="grow ml-2">{route.lable}</span>
+                      <div
+                        className={`triangle h-6 w-6 bg-white absolute -right-1 top-auto z-10 ${
+                          location.pathname === route.url ? "block" : "hidden"
+                        }`}
+                      ></div>
+                    </ListItem>
+                  </Link>
+                ))}
+
                 <Divider />
-                <Link to={"/dashboard/drivers"}>
-                  <ListItem
-                    sx={{ py: 2 }}
-                    className={`justify-between relative py-3 px-4 border-b border-[#b8b8b8b0]  ${
-                      location.pathname === "/dashboard/drivers"
-                        ? "bg-[#0909dc]"
-                        : ""
-                    }`}
-                  >
-                    <DriveEtaIcon />
-                    <span className="grow ml-2">Drivers</span>
-                    <div
-                      className={`triangle h-6 w-6 bg-white absolute -right-1 top-auto z-10 ${
-                        location.pathname === "/dashboard/drivers"
-                          ? "block"
-                          : "hidden"
+                <div className="text-yellow-300 pl-2 text-lg font-bold  py-1 z-10 overflow-hidden border-gray-300">
+                  Our Services
+                </div>
+                {ourServiceRoute.map((route) => (
+                  <Link to={route.url} key={route.url}>
+                    <ListItem
+                      sx={{ py: 2 }}
+                      className={`justify-between relative py-3 px-4 border-y border-[#b8b8b8b0] text-green-200 hover:bg-[#0909dc] ${
+                        location.pathname === route.url ? "bg-[#0909dc]" : ""
                       }`}
-                    ></div>
-                  </ListItem>
-                </Link>
+                    >
+                      {route.icon}
+                      <span className="grow ml-2">{route.lable}</span>
+                      <div
+                        className={`triangle h-6 w-6 bg-white absolute -right-1 top-auto z-10 ${
+                          location.pathname === route.url ? "block" : "hidden"
+                        }`}
+                      ></div>
+                    </ListItem>
+                  </Link>
+                ))}
+
+                <div className="text-yellow-300 pl-2 text-lg font-bold  py-1 z-10 overflow-hidden border-gray-300">
+                  Our Partners
+                </div>
+                {ourPartnerRoute.map((route) => (
+                  <Link to={route.url} key={route.url}>
+                    <ListItem
+                      sx={{ py: 2 }}
+                      className={`justify-between relative py-3 px-4 border-y border-[#b8b8b8b0] text-green-200 hover:bg-[#0909dc] ${
+                        location.pathname === route.url ? "bg-[#0909dc]" : ""
+                      }`}
+                    >
+                      {route.icon}
+                      <span className="grow ml-2">{route.lable}</span>
+                      <div
+                        className={`triangle h-6 w-6 bg-white absolute -right-1 top-auto z-10 ${
+                          location.pathname === route.url ? "block" : "hidden"
+                        }`}
+                      ></div>
+                    </ListItem>
+                  </Link>
+                ))}
+
                 <Divider />
                 <Link to={"/dashboard/local-partners"}>
                   <ListItem
-                    open={open}
+                    open={location.pathname === "/dashboard/local-partners"}
                     onClick={() => setOpen((prevOpen) => !prevOpen)}
                     sx={{ py: 2 }}
                     className={`justify-between relative py-3 px-4 border-b border-[#b8b8b8b0]  ${
@@ -230,7 +298,11 @@ function Dashboard(props) {
                   >
                     <PeopleIcon />
                     <span className="grow ml-2">Local Partners</span>
-                    {open ? <ExpandLess /> : <ExpandMore />}
+                    {location.pathname === "/dashboard/local-partners" ? (
+                      <ExpandLess />
+                    ) : (
+                      <ExpandMore />
+                    )}
                     <div
                       className={`triangle h-6 w-6 bg-white absolute -right-1 top-auto z-10 ${
                         location.pathname === "/dashboard/local-partners"
@@ -243,7 +315,12 @@ function Dashboard(props) {
                 <Divider />
               </>
             )}
-            <Collapse component="li" in={open} timeout="auto" unmountOnExit>
+            <Collapse
+              component="li"
+              in={location.pathname === "/dashboard/local-partners"}
+              timeout="auto"
+              unmountOnExit
+            >
               <List disablePadding>
                 {isAdmin &&
                   adminNavRoutes?.map((item, i) => (
@@ -283,7 +360,7 @@ function Dashboard(props) {
                 onClick={() => setOpenCommunicationMenu((p) => !p)}
                 sx={{ py: 2 }}
                 className={` flex justify-between relative ${
-                  activeMenu === "Communication" ? "bg-green-500" : ""
+                  activeMenu === "Communication" ? "bg-[#0909dc]" : ""
                 }`}
               >
                 <SupportAgentIcon />
@@ -449,6 +526,7 @@ function Dashboard(props) {
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
         aria-label="mailbox folders"
+        className="scrollbar scrollbar-thumb-gray-900 scrollbar-track-gray-100"
       >
         {/* The implementation can be swapped with js to avoid SEO duplication of links. */}
         <Drawer
@@ -464,6 +542,7 @@ function Dashboard(props) {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
+              bgcolor: "blue",
             },
           }}
         >
@@ -476,6 +555,7 @@ function Dashboard(props) {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
+              bgcolor: "blue",
             },
           }}
           open
@@ -497,7 +577,6 @@ function Dashboard(props) {
           ((isAdmin && <AdminDashboard />) ||
             (isPartner && <PartnerDashboard />))}
         {(isAdmin || isPartner) && <Outlet />}
-        {/* {(isAdmin || isVerifiedPartner) && <Outlet />} */}
       </Box>
     </Box>
   );
@@ -512,34 +591,3 @@ Dashboard.propTypes = {
 };
 
 export default Dashboard;
-
-/* (isAdmin &&
-              adminNavRoutes.map((item, i) => (
-                <ListItem
-                  key={item.queryText}
-                  disablePadding
-                  sx={{
-                    color: "white",
-                    pl: 2,
-                    m: 0,
-                    bgcolor: `${activeStatus === i && "#0909dc"}`,
-                  }}
-                  onClick={() => handleChangeQueryText(item.queryText, i)}
-                >
-                  <ListItemButton className="space-x-2">
-                    <span>{item.icon}</span>
-                    {item.queryText === "Pending" ? (
-                      <Badge
-                        color="secondary"
-                        badgeContent={`${
-                          item.queryText === "Pending" && totalRequest
-                        }`}
-                      >
-                        <ListItemText primary={item.label} sx={{ ml: 0 }} />
-                      </Badge>
-                    ) : (
-                      <ListItemText primary={item.label} sx={{ ml: 0 }} />
-                    )}
-                  </ListItemButton>
-                </ListItem>
-              ))) || */
