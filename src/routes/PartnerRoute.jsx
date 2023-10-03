@@ -3,17 +3,15 @@ import { AuthContext } from "../contextAPIs/AuthProvider";
 import PendingPartnership from "../components/PendingPartnership";
 
 const PartnerRoute = ({ children }) => {
-  const { userData, loadingUserData, isVerifiedPartner } =
-    useContext(AuthContext);
+  const { userData, loadingUserData } = useContext(AuthContext);
 
-  console.log(isVerifiedPartner);
-
+  if (loadingUserData) {
+    return <h3>Loading..</h3>;
+  }
   //Returning account pending message
   if (userData.status === "Pending") {
     return <PendingPartnership />;
   }
-
-  console.log(loadingUserData, userData);
 
   return children;
 };

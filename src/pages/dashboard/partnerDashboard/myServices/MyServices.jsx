@@ -27,7 +27,6 @@ import { useForm } from "react-hook-form";
 import { AuthContext } from "../../../../contextAPIs/AuthProvider";
 import {
   arrayUnion,
-  collection,
   deleteDoc,
   doc,
   getDoc,
@@ -37,10 +36,15 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { db, partnersCollection } from "../../../../firebase/firebase.config";
+import {
+  localServicesCollection,
+  partnersCollection,
+} from "../../../../firebase/firebase.config";
 import { v4 as uuid } from "uuid";
 import { PartnerContext } from "../../../../contextAPIs/PartnerProvider";
 import PageHeading from "../../../../components/PageHeading";
+import { successNotification } from "../../../../components/Notifications";
+// import { SuccessNotification } from "../../../../components/Notifications";
 
 const MyServices = () => {
   const [services, setServices] = useState([]);
@@ -51,15 +55,6 @@ const MyServices = () => {
   const { partnerDetails } = useContext(PartnerContext);
   const [service, setService] = useState({});
 
-  let serviceCollection;
-
-  if (!loadingUserData) {
-    serviceCollection = collection(
-      db,
-      userData.serviceCategory?.split(" ")?.join("")
-    );
-  }
-
   const {
     handleSubmit,
     // reset,
@@ -68,9 +63,9 @@ const MyServices = () => {
   } = useForm();
 
   useEffect(() => {
-    const loadData = async (user, serviceCollection) => {
+    const loadData = async (user, localServicesCollection) => {
       const docSnapshot = await getDocs(
-        query(serviceCollection, where("providerUid", "==", user.uid))
+        query(localServicesCollection, where("providerUid", "==", user.uid))
       );
 
       if (docSnapshot.docs.length > 0) {
@@ -81,11 +76,17 @@ const MyServices = () => {
         setServices([]);
       }
     };
-    user && !loadingUserData && loadData(user, serviceCollection);
+    user && !loadingUserData && loadData(user, localServicesCollection);
   }, [user, loadingUserData, refetchServices]);
 
   const handleAddService = async (data) => {
-    const { serviceName, serviceArea, vehicleNumber, vehicleType } = data;
+    const {
+      serviceName,
+      serviceArea,
+      vehicleNumber,
+      vehicleType,
+      phoneNumber,
+    } = data;
 
     const id = uuid();
 
@@ -95,7 +96,7 @@ const MyServices = () => {
       serviceCategory: partnerDetails.serviceCategory,
       serviceProvider: partnerDetails.personalInformation.fullName,
       providerUid: user.uid,
-      phoneNumber: partnerDetails.personalInformation.phoneNumber,
+      phoneNumber,
       id,
     };
 
@@ -104,7 +105,7 @@ const MyServices = () => {
       service.vehicleType = vehicleType;
     }
 
-    await setDoc(doc(serviceCollection, id), service).then(() =>
+    await setDoc(doc(localServicesCollection, id), service).then(() =>
       setRefetchServices((p) => !p)
     );
 
@@ -115,7 +116,9 @@ const MyServices = () => {
       "serviceInformation.servicesOffered": arrayUnion({
         id,
       }),
-    });
+    }).then(() =>
+      successNotification("The task is added successfully.", "success")
+    );
   };
 
   // Partners table header
@@ -136,8 +139,6 @@ const MyServices = () => {
     label: "Action",
     width: 120,
   });
-
-  console.log(services);
 
   // creating single row
   function createData(
@@ -165,30 +166,36 @@ const MyServices = () => {
 
   // deleting service
   const handleDelete = async (id) => {
-    await deleteDoc(doc(serviceCollection, id)).then(() =>
-      setRefetchServices((p) => !p)
-    );
+    await deleteDoc(doc(localServicesCollection, id)).then(() => {
+      successNotification("The task is deleted successfully.", "success");
+      setRefetchServices((p) => !p);
+    });
   };
 
   const handleUpdateServiceModal = async (id) => {
-    const res = await getDoc(doc(serviceCollection, id));
+    const res = await getDoc(doc(localServicesCollection, id));
     if (res.exists()) {
       const singleService = res.data();
       setService(singleService);
+
       setUpdateServiceModal(true);
     }
   };
 
-  const handleUpdateService = async (data) => {
-    const { serviceName, serviceArea } = data;
+  const handleUpdateService = async (e) => {
+    e.preventDefault();
+    const serviceName = e.target.serviceName.value;
+    const serviceArea = e.target.serviceArea.value;
+    console.log(serviceName, serviceArea);
 
-    await updateDoc(doc(serviceCollection, service.id), {
+    await updateDoc(doc(localServicesCollection, service.id), {
       serviceName,
       serviceArea,
     }).then(() => {
       setUpdateServiceModal(false);
       setRefetchServices((p) => !p);
       setService({});
+      successNotification("The task is updated successfully.", "success");
     });
   };
 
@@ -201,6 +208,7 @@ const MyServices = () => {
   return (
     <div>
       <PageHeading text={"My services"} />
+
       <div className="flex items-center justify-between  md:pr-3 mb-2">
         <p className="my-2 font-bold">{services.length} services available</p>{" "}
         <button
@@ -244,7 +252,7 @@ const MyServices = () => {
                         return (
                           <TableCell key={column.id} align="center">
                             {(column.id === "action" && (
-                              <>
+                              <div className="flex gap-1">
                                 <button
                                   onClick={() => handleDelete(row.id)}
                                   className="bg-red-500 text-white p-1 rounded"
@@ -259,7 +267,7 @@ const MyServices = () => {
                                 >
                                   <EditIcon />
                                 </button>
-                              </>
+                              </div>
                             )) ||
                               value}
                           </TableCell>
@@ -329,6 +337,17 @@ const MyServices = () => {
                 />
               </Grid>
 
+              {/* Phone Number */}
+              <Grid item xs={12} sm={6} md={6}>
+                <TextField
+                  label="Phone Number"
+                  type="tel"
+                  defaultValue=""
+                  fullWidth
+                  {...register("phoneNumber", { required: true })}
+                />
+              </Grid>
+
               {/* Vehicle Registration Number */}
               {partnerDetails.serviceCategory ===
                 "Logistics and Transportation" && (
@@ -371,13 +390,14 @@ const MyServices = () => {
           </DialogActions>
         </Box>
       </Dialog>
+
       {/* Update service modal */}
       <Dialog
         open={updateServiceModal}
         onClose={() => setUpdateServiceModal(false)}
         aria-labelledby="responsive-dialog-title"
       >
-        <Box component="form" onSubmit={handleSubmit(handleUpdateService)}>
+        <Box component="form" onSubmit={handleUpdateService}>
           <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
             Update the service
           </DialogTitle>
@@ -430,6 +450,7 @@ const MyServices = () => {
               type="submit"
               autoFocus
               sx={{ bgcolor: "blue", color: "white", hover: "none" }}
+              // onClick={handleUpdateService}
             >
               Update
             </Button>

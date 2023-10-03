@@ -7,6 +7,8 @@ import ChatProvider from "./contextAPIs/ChatProvider";
 import { RouterProvider } from "react-router-dom";
 import PartnerProvider from "./contextAPIs/PartnerProvider";
 import RequirementsProvider from "./contextAPIs/RequirementsProvider";
+import { SnackbarProvider } from "notistack";
+import { LoadScript } from "@react-google-maps/api";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -14,7 +16,13 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <PartnerProvider>
         <RequirementsProvider>
           <ChatProvider>
-            <RouterProvider router={router} />
+            <SnackbarProvider maxSnack={3}>
+              <LoadScript
+                googleMapsApiKey={import.meta.env.VITE_Google_Api_Key}
+              >
+                <RouterProvider router={router} />
+              </LoadScript>
+            </SnackbarProvider>
           </ChatProvider>
         </RequirementsProvider>
       </PartnerProvider>

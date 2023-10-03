@@ -2,15 +2,13 @@ import { createBrowserRouter } from "react-router-dom";
 import Main from "../layouts/Main";
 import Dashboard from "../layouts/Dashboard";
 import PrivetRouter from "./PrivetRouter";
-import LocalPartners from "../pages/dashboard/adminDashboard/localPartners/LocalPartners";
-import CustomerChat from "../pages/dashboard/adminDashboard/communication/CustomerChat";
 import MyServices from "../pages/dashboard/partnerDashboard/myServices/MyServices";
 import PartnerRoute from "./PartnerRoute";
 import PartnerProfile from "../pages/dashboard/partnerDashboard/PartnerProfile/PartnerProfile";
 import Support from "../pages/dashboard/partnerDashboard/support/Support";
-import PartnerOnboarding from "../pages/form/PartnerOnboarding";
+import PartnerOnboarding from "../pages/forms/PartnerOnboarding";
+import DriverOnBoarding from "../pages/forms/DriverOnBoarding";
 import Login from "../pages/login/Login";
-import DriverOnBoarding from "../pages/form/DriverOnBoarding";
 import TravelBookings from "./../pages/dashboard/adminDashboard/clientOrders/travelBookings/TravelBookings";
 import FoodOrders from "../pages/dashboard/adminDashboard/clientOrders/foodOrders/FoodOrders";
 import LocalServices from "../pages/dashboard/adminDashboard/ourServices/localServices/LocalServices";
@@ -20,7 +18,13 @@ import FoodServices from "./../pages/dashboard/adminDashboard/ourServices/foodSe
 import RoomBookings from "../pages/dashboard/adminDashboard/clientOrders/roomBookings/RoomBookings";
 import Restaurants from "./../pages/dashboard/adminDashboard/ourPartners/restaurants/Restaurants";
 import Hotels from "./../pages/dashboard/adminDashboard/ourPartners/hotels/Hotels";
-import Drivers from "../pages/dashboard/adminDashboard/ourPartners/drivers/drivers";
+import CustomerChat from "../pages/dashboard/communication/CustomerChat";
+import RestaurantOnboarding from "../pages/forms/RestaurantOnboarding";
+import HotelOnboarding from "../pages/forms/HotelOnboarding";
+import Drivers from "../pages/dashboard/adminDashboard/ourPartners/drivers/Drivers";
+import LocalPartners from "../pages/dashboard/adminDashboard/ourPartners/localPartners/LocalPartners";
+import TravelRequirements from "../pages/dashboard/adminDashboard/requirements/travelRequirements/TravelRequirements";
+import ChatWithAdmin from "../pages/dashboard/partnerDashboard/messages/ChatWithAdmin";
 
 export const router = createBrowserRouter([
   {
@@ -39,6 +43,14 @@ export const router = createBrowserRouter([
       </PrivetRouter>
     ),
     children: [
+      /* =================================================
+                          Requirements
+      =================================================*/
+
+      {
+        path: "/dashboard/travel-requirements",
+        element: <TravelRequirements />,
+      },
       /* =================================================
                           Client's Orders
       =================================================*/
@@ -146,6 +158,10 @@ export const router = createBrowserRouter([
           </PrivetRouter>
         ),
       },
+
+      /* =================================================
+                    Partner dashboard routes
+    =================================================*/
       {
         path: "/dashboard/my-services",
         element: (
@@ -165,23 +181,41 @@ export const router = createBrowserRouter([
       {
         path: "/dashboard/support",
         element: (
-          <PartnerRoute>
-            <Support />
-          </PartnerRoute>
+          <PrivetRouter>
+            <PartnerRoute>
+              <Support />
+            </PartnerRoute>
+          </PrivetRouter>
         ),
+      },
+      {
+        path: "/dashboard/messages",
+        element: <ChatWithAdmin />,
       },
     ],
   },
+
+  /* =================================================
+                     Onboarding Forms
+    =================================================*/
   {
     path: "/partner-onboarding",
     element: <PartnerOnboarding />,
   },
   {
-    path: "/login",
-    element: <Login />,
-  },
-  {
     path: "/driver-onboarding",
     element: <DriverOnBoarding />,
+  },
+  {
+    path: "/restaurant-onboarding",
+    element: <RestaurantOnboarding />,
+  },
+  {
+    path: "/hotel-onboarding",
+    element: <HotelOnboarding />,
+  },
+  {
+    path: "/login",
+    element: <Login />,
   },
 ]);

@@ -23,6 +23,10 @@ const partnersCollection = collection(db, "partners");
 const usersCollection = collection(db, "users");
 const driversCollection = collection(db, "drivers");
 const requirementsCollection = collection(db, "allRequirements");
+const localServicesCollection = collection(db, "localServices");
+const restaurentsCollection = collection(db, "restaurants");
+const hotelsCollection = collection(db, "hotels");
+const travelRequirementsCollection = collection(db, "travelRequirements");
 
 // Use the 'firebase' instance created above to call functions
 const deleteUserFromAuth = httpsCallable(
@@ -40,5 +44,9 @@ export {
   deleteUserFromAuth,
   driversCollection,
   requirementsCollection,
+  localServicesCollection,
+  restaurentsCollection,
+  hotelsCollection,
+  travelRequirementsCollection,
   storage,
 };

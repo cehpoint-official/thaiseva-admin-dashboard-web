@@ -61,6 +61,7 @@ const AuthProvider = ({ children }) => {
   const logOut = () => {
     setIsAdmin(false);
     setIsPatner(false);
+    // setLoading(false);
     return signOut(auth);
   };
 
@@ -78,7 +79,6 @@ const AuthProvider = ({ children }) => {
       if (currentUser) {
         setUser(currentUser);
         setLoading(false);
-        console.log(currentUser);
       }
     });
 

@@ -279,6 +279,7 @@ const PartnerOnboarding = () => {
                 defaultValue=""
                 fullWidth
                 {...register("fullName", { required: true })}
+                className="capitalize"
               />
               {errors?.fullName && (
                 <span className="text-red-500">Full Name is required</span>

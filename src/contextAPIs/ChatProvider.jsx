@@ -6,11 +6,19 @@ import { useReducer } from "react";
 export const ChatContext = createContext();
 
 const ChatProvider = ({ children }) => {
-  const { user } = useContext(AuthContext);
+  const { user, isAdmin } = useContext(AuthContext);
   const INITIAL_STATE = {
     chatId: "null",
     oppositeUser: {},
   };
+
+  let currentUid;
+
+  if (isAdmin) {
+    currentUid = "ThaisevaAdmin";
+  } else {
+    currentUid = user?.uid;
+  }
 
   const chatReducer = (state, action) => {
     switch (action.type) {
@@ -18,10 +26,11 @@ const ChatProvider = ({ children }) => {
         return {
           oppositeUser: action.payload,
           chatId:
-            user.uid > action.payload?.uid
-              ? user.uid + action.payload.uid
-              : action.payload.uid + user.uid,
+            currentUid > action.payload?.uid
+              ? currentUid + action.payload.uid
+              : action.payload.uid + currentUid,
         };
+
       default:
         return state;
     }

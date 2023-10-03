@@ -21,3 +21,39 @@
 .opposite-text {
   @apply bg-white rounded-r-lg rounded-bl-lg;
 }
+
+/* For webkit browsers (Chrome and Safari) */
+/* Style the vertical scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* Style the vertical scrollbar thumb */
+::-webkit-scrollbar-thumb {
+  background-color: rgb(37, 20, 172);
+  border-radius: 5px;
+  box-shadow: 0 0 2px rgba(30, 11, 153, 0.2);
+}
+
+/* Style the horizontal scrollbar */
+::-webkit-scrollbar:horizontal {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: rgb(225, 222, 222);
+}
+
+/* Style the horizontal scrollbar thumb */
+::-webkit-scrollbar-thumb:horizontal {
+  background-color: rgb(3, 3, 191);
+  border-radius: 5px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+/* For non-webkit browsers (Firefox) */
+/* Style the scrollbar */
+/* scrollbar-width: thin;
+scrollbar-color: rgb(10, 10, 216) rgb(220, 220, 220); */

@@ -12,15 +12,15 @@ import {
 } from "firebase/firestore";
 
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { db, storage } from "../../../../firebase/firebase.config";
-import { AuthContext } from "../../../../contextAPIs/AuthProvider";
-import { ChatContext } from "../../../../contextAPIs/ChatProvider";
+import { AuthContext } from "../../../contextAPIs/AuthProvider";
+import { ChatContext } from "../../../contextAPIs/ChatProvider";
+import { db, storage } from "../../../firebase/firebase.config";
 
 const Input = () => {
   const [text, setText] = useState("");
   const [img, setImg] = useState(null);
 
-  const { user } = useContext(AuthContext);
+  const { user, isAdmin } = useContext(AuthContext);
   const { data } = useContext(ChatContext);
 
   const handleSend = async () => {
@@ -38,7 +38,7 @@ const Input = () => {
               messages: arrayUnion({
                 id: uuid(),
                 text,
-                senderId: user.uid,
+                senderId: isAdmin ? "ThaisevaAdmin" : user.uid,
                 date: Timestamp.now(),
                 img: imgURL,
               }),
@@ -46,24 +46,26 @@ const Input = () => {
           });
         }
       );
-    } else {
+    } else if (text.length > 0) {
       await updateDoc(doc(db, "chats", data.chatId), {
         messages: arrayUnion({
           id: uuid(),
           text,
-          senderId: user.uid,
+          senderId: isAdmin ? "ThaisevaAdmin" : user.uid,
           date: Timestamp.now(),
         }),
       });
     }
 
-    await updateDoc(doc(db, "userChats", user.uid), {
+    // adding the last message to the thaiseva admin conversation
+    await updateDoc(doc(db, "userChats", "ThaisevaAdmin"), {
       [data.chatId + ".lastMessage"]: {
         text,
       },
       [data.chatId + ".date"]: serverTimestamp(),
     });
 
+    // adding the last message to the user conversation
     await updateDoc(doc(db, "userChats", data.oppositeUser.uid), {
       [data.chatId + ".lastMessage"]: {
         text,

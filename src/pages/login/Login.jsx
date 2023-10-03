@@ -1,7 +1,28 @@
 import { useContext, useState } from "react";
 import { AuthContext } from "../../contextAPIs/AuthProvider";
-import { Box, Button, Grid, Paper, TextField } from "@mui/material";
+import {
+  Box,
+  Button,
+  Grid,
+  Modal,
+  Paper,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
+import { closeSnackbar } from "notistack";
+
+const style = {
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: 400,
+  bgcolor: "background.paper",
+  border: "2px solid blue",
+  boxShadow: 24,
+  p: 4,
+};
 
 const Login = () => {
   const { logInUser } = useContext(AuthContext);
@@ -22,6 +43,10 @@ const Login = () => {
       })
       .catch((error) => setError(error.message));
   };
+
+  const [open, setOpen] = useState(false);
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
   return (
     <div className="w-screen h-screen flex items-center justify-center md:px-10 p-2 py-12 bg-[blue]">
       {/* form container */}
@@ -64,18 +89,68 @@ const Login = () => {
           {error && <span className="text-red-500">{error}</span>}
           <Box textAlign="center" sx={{ my: 2 }}>
             <Button type="submit" variant="contained" color="primary">
-              Submit
+              Login
             </Button>
           </Box>
 
-          <p>
+          <div>
             Want to be a partner?{" "}
-            <Link to="/register" className="text-[blue] underline">
-              Register
-            </Link>
-          </p>
+            <div
+              onClick={handleOpen}
+              className="text-[blue] underline inline-block"
+            >
+              Click Here
+            </div>
+          </div>
         </Box>
       </Paper>
+      <Modal
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box sx={style}>
+          <h3 className="font-bold text-xl text-slate-600">
+            Which type of partner do you want to be?
+          </h3>
+
+          <ul className="list-disc pl-4">
+            <li>
+              <Link
+                to="/partner-onboarding"
+                className="online-block text-blue-600 hover:text-blue-800 underline"
+              >
+                Local Partner
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/driver-onboarding"
+                className="online-block text-blue-600 hover:text-blue-800 underline"
+              >
+                Driving
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/restaurant-onboarding"
+                className="online-block text-blue-600 hover:text-blue-800 underline"
+              >
+                Restaurant
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/hotel-onboarding"
+                className="online-block text-blue-600 hover:text-blue-800 underline"
+              >
+                Hotel Booking
+              </Link>
+            </li>
+          </ul>
+        </Box>
+      </Modal>
     </div>
   );
 };
