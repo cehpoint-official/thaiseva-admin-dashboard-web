@@ -6,37 +6,60 @@ import { v4 as uuid } from "uuid";
 import {
   Timestamp,
   arrayUnion,
+  collection,
   doc,
+  getDoc,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
 
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { AuthContext } from "../../../contextAPIs/AuthProvider";
-import { AdminChatContext } from "../../../contextAPIs/AdminChatProvider";
-import { db, storage } from "../../../firebase/firebase.config";
+import { AuthContext } from "../../../../contextAPIs/AuthProvider";
+import { PartnerChatContext } from "../../../../contextAPIs/PartnerChatProvider";
+import { db, storage } from "../../../../firebase/firebase.config";
 
-const Input = () => {
+const PartnerChatInput = () => {
   const [text, setText] = useState("");
   const [img, setImg] = useState(null);
 
   const { user, isAdmin } = useContext(AuthContext);
-  const { data } = useContext(AdminChatContext);
+  const { data } = useContext(PartnerChatContext);
 
   const handleSend = async () => {
+    const conversationId = user.uid + "_CustomerSupport";
     console.log(data.chatId);
+
+    // creating sub collection to check the convarsation is exist or not
+    const parentDocRef = doc(db, "chatRooms", "CustomerSupport");
+    const subcollectionRef = collection(parentDocRef, "chatRooms");
+    const documentRef = doc(subcollectionRef, conversationId);
+
+    const querySnapshot = await getDoc(documentRef);
+
+    if (!querySnapshot.id) {
+      // creating conversation for thaiseva admin
+      await updateDoc(doc(db, "chatRooms", "CustomerSupport"), {
+        [conversationId + ".userInfo"]: {
+          uid: user.uid,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+        },
+        [conversationId + ".date"]: serverTimestamp(),
+      });
+    }
+
     if (img) {
       const storageRef = ref(storage, uuid());
-      const uploadTask = await uploadBytesResumable(storageRef, img);
+      const uploadTask = uploadBytesResumable(storageRef, img);
 
-      const imgURL = await getDownloadURL(uploadTask.ref);
+      const imgURL = getDownloadURL(uploadTask.ref);
 
       if (imgURL) {
         await updateDoc(doc(db, "chats", data.chatId), {
           messages: arrayUnion({
             id: uuid(),
             text,
-            senderId: "_CustomerSupport",
+            senderId: user.uid,
             date: Timestamp.now(),
             img: imgURL,
           }),
@@ -47,7 +70,7 @@ const Input = () => {
         messages: arrayUnion({
           id: uuid(),
           text,
-          senderId: "_CustomerSupport",
+          senderId: user.uid,
           date: Timestamp.now(),
         }),
       });
@@ -97,4 +120,4 @@ const Input = () => {
   );
 };
 
-export default Input;
+export default PartnerChatInput;

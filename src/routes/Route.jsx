@@ -29,11 +29,7 @@ import ChatWithAdmin from "../pages/dashboard/partnerDashboard/messages/ChatWith
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: (
-      <PrivetRouter>
-        <Main />
-      </PrivetRouter>
-    ),
+    element: <Main />,
   },
   {
     path: "/dashboard",

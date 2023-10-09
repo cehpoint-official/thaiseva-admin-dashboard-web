@@ -1,12 +1,14 @@
 import { doc, onSnapshot } from "firebase/firestore";
 import { useContext, useEffect, useState } from "react";
 import { db } from "../../../../firebase/firebase.config";
-import { ChatContext } from "../../../../contextAPIs/ChatProvider";
 import Message from "./Message";
+import { PartnerChatContext } from "../../../../contextAPIs/PartnerChatProvider";
+import { useRef } from "react";
 
 const Messages = () => {
   const [messages, setMessages] = useState([]);
-  const { data } = useContext(ChatContext);
+  const { data } = useContext(PartnerChatContext);
+  const ref = useRef();
 
   useEffect(() => {
     const unSub = onSnapshot(doc(db, "chats", data.chatId), (doc) => {
@@ -18,8 +20,15 @@ const Messages = () => {
     };
   }, [data]);
 
+  useEffect(() => {
+    ref.current.scrollTop = ref.current.scrollHeight;
+  }, [messages]);
+
   return (
-    <div className="bg-[#ddddf7] p-3 h-[calc(100%-96px)] overflow-y-scroll">
+    <div
+      ref={ref}
+      className="bg-[#ddddf7] p-3 h-[calc(100%-96px)] overflow-y-scroll scroll-smooth"
+    >
       {messages && messages?.map((m) => <Message message={m} key={m.id} />)}
     </div>
   );

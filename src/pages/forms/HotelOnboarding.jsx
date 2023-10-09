@@ -114,9 +114,6 @@ const HotelOnboarding = () => {
                     doc(hotelsCollection, createdUser.uid),
                     hotelInfo
                   );
-
-                  // creating an empty chat conversation for the user.
-                  await setDoc(doc(db, "userChats", createdUser.uid), {});
                 }
               );
             }

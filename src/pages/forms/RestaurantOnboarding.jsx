@@ -116,9 +116,6 @@ const RestaurantOnboarding = () => {
                     doc(restaurentsCollection, createdUser.uid),
                     restaurantInfo
                   );
-
-                  // creating an empty chat conversation for the user.
-                  await setDoc(doc(db, "userChats", createdUser.uid), {});
                 }
               );
             }

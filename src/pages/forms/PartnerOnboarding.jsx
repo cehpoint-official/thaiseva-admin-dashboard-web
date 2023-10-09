@@ -155,9 +155,6 @@ const PartnerOnboarding = () => {
                     doc(partnersCollection, createdUser.uid),
                     partnerInfo
                   ).catch(() => console.log(" error"));
-
-                  // creating an empty chat conversation for the user.
-                  await setDoc(doc(db, "userChats", createdUser.uid), {});
                 }
               );
             }

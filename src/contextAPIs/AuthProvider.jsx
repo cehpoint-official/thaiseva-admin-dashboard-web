@@ -61,7 +61,7 @@ const AuthProvider = ({ children }) => {
   const logOut = () => {
     setIsAdmin(false);
     setIsPatner(false);
-    // setLoading(false);
+    setLoading(false);
     return signOut(auth);
   };
 

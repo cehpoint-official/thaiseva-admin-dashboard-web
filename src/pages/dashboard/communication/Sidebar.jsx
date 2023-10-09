@@ -8,7 +8,7 @@ const Sidebar = ({ setOpenSidebar }) => {
         Partners Conversation
       </div> */}
       <Search setOpenSidebar={setOpenSidebar} />
-      <Chats />
+      <Chats setOpenSidebar={setOpenSidebar} />
     </div>
   );
 };

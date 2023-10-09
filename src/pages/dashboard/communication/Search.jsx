@@ -12,15 +12,13 @@ import { useState } from "react";
 import { useContext } from "react";
 import { db, usersCollection } from "../../../firebase/firebase.config";
 import { Tooltip } from "@mui/material";
-import { ChatContext } from "../../../contextAPIs/ChatProvider";
+import { AdminChatContext } from "../../../contextAPIs/AdminChatProvider";
 import CloseIcon from "@mui/icons-material/Close";
-import { closeSnackbar } from "notistack";
-
 const Search = ({ setOpenSidebar }) => {
   const [username, setUsername] = useState("");
   const [oppositeUser, setOppositeUser] = useState(null);
   const [error, setError] = useState(false);
-  const { dispatch } = useContext(ChatContext);
+  const { dispatch } = useContext(AdminChatContext);
 
   const handleSearch = async () => {
     try {
@@ -40,16 +38,13 @@ const Search = ({ setOpenSidebar }) => {
   };
 
   const handleSelect = async () => {
-    const conversationId =
-      "ThaisevaAdmin" > oppositeUser?.uid
-        ? "ThaisevaAdmin" + oppositeUser.uid
-        : oppositeUser.uid + "ThaisevaAdmin";
+    const conversationId = oppositeUser.uid + "_ClientSupport";
 
     try {
       const res = await getDoc(doc(db, "chats", conversationId));
 
       if (!res.exists()) {
-        await setDoc(doc(db, "chats", conversationId), { message: [] });
+        await setDoc(doc(db, "chats", conversationId), { messages: [] });
         dispatch({
           type: "CHANGE_USER",
           payload: {
@@ -60,7 +55,7 @@ const Search = ({ setOpenSidebar }) => {
         });
 
         // creating conversation for thaiseva admin
-        await updateDoc(doc(db, "userChats", "ThaisevaAdmin"), {
+        await updateDoc(doc(db, "chatRooms", "CustomerSupport"), {
           [conversationId + ".userInfo"]: {
             uid: oppositeUser.uid,
             displayName: oppositeUser.displayName,
@@ -70,19 +65,22 @@ const Search = ({ setOpenSidebar }) => {
         });
 
         // creating conversation for user
-        await updateDoc(doc(db, "userChats", oppositeUser.uid), {
+        await updateDoc(doc(db, "chatRooms", oppositeUser.uid), {
           [conversationId + ".userInfo"]: {
-            uid: "ThaisevaAdmin",
+            uid: "_ClientSupport",
             displayName: "Admin Support",
             photoURL:
               "https://images.pexels.com/photos/3823488/pexels-photo-3823488.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", // todo : thaiseva logo
           },
           [conversationId + ".date"]: serverTimestamp(),
         });
+      } else {
+        dispatch({ type: "CHANGE_USER", payload: oppositeUser });
       }
     } catch (error) {
       console.log(error);
     }
+    setOpenSidebar(false);
     setOppositeUser(null);
     setUsername("");
   };
@@ -98,10 +96,7 @@ const Search = ({ setOpenSidebar }) => {
           onChange={(e) => setUsername(e.target.value)}
           value={username}
         />
-        <div
-          onClick={() => setOpenSidebar((p) => !p)}
-          className="md:hidden block"
-        >
+        <div onClick={() => setOpenSidebar(false)} className="lg:hidden block">
           <CloseIcon />
         </div>
       </div>
@@ -113,12 +108,12 @@ const Search = ({ setOpenSidebar }) => {
             onClick={handleSelect}
           >
             <img
-              src={oppositeUser.photoURL}
+              src={oppositeUser?.photoURL}
               alt=""
               className="w-10 h-10 rounded-full bg-transparent"
             />
             <div>
-              <span>{oppositeUser.displayName}</span>
+              <span>{oppositeUser?.displayName}</span>
             </div>
           </div>
         </Tooltip>

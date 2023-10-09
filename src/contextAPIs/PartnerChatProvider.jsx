@@ -3,32 +3,20 @@ import { createContext } from "react";
 import { AuthContext } from "./AuthProvider";
 import { useReducer } from "react";
 
-export const ChatContext = createContext();
-
-const ChatProvider = ({ children }) => {
-  const { user, isAdmin } = useContext(AuthContext);
+export const PartnerChatContext = createContext();
+const PartnerChatProvider = ({ children }) => {
+  const { user } = useContext(AuthContext);
   const INITIAL_STATE = {
     chatId: "null",
     oppositeUser: {},
   };
-
-  let currentUid;
-
-  if (isAdmin) {
-    currentUid = "ThaisevaAdmin";
-  } else {
-    currentUid = user?.uid;
-  }
 
   const chatReducer = (state, action) => {
     switch (action.type) {
       case "CHANGE_USER":
         return {
           oppositeUser: action.payload,
-          chatId:
-            currentUid > action.payload?.uid
-              ? currentUid + action.payload.uid
-              : action.payload.uid + currentUid,
+          chatId: user?.uid + "_CustomerSupport",
         };
 
       default:
@@ -38,10 +26,10 @@ const ChatProvider = ({ children }) => {
 
   const [state, dispatch] = useReducer(chatReducer, INITIAL_STATE);
   return (
-    <ChatContext.Provider value={{ data: state, dispatch }}>
+    <PartnerChatContext.Provider value={{ data: state, dispatch }}>
       {children}
-    </ChatContext.Provider>
+    </PartnerChatContext.Provider>
   );
 };
 
-export default ChatProvider;
+export default PartnerChatProvider;

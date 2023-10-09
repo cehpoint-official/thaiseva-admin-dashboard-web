@@ -113,15 +113,15 @@ function Dashboard(props) {
         url: "/support",
         label: "Support",
       },
-      {
-        icon: <ChatBubbleRoundedIcon />,
-        url: "/messages",
-        label: "Messages",
-      },
       userData.serviceCategory !== "Driving" && {
         icon: <TaskIcon />,
         url: "/my-services",
         label: "My Services",
+      },
+      {
+        icon: <ChatBubbleRoundedIcon />,
+        url: "/messages",
+        label: "Messages",
       },
     ];
   }
@@ -247,7 +247,7 @@ function Dashboard(props) {
                   </ListItem>
                 </Link>
 
-                <div className="text-yellow-300 pl-2 text-lg font-bold  py-1 z-10 overflow-hidden border-gray-300 ">
+                <div className="text-yellow-300 border-b-2 mt-2 border-yellow-300 pl-2 text-lg font-bold  py-1 z-10 overflow-hidden ">
                   Client&apos;s Orders
                 </div>
                 {clientOrderRoute.map((route, i) => (
@@ -270,7 +270,7 @@ function Dashboard(props) {
                 ))}
 
                 <Divider />
-                <div className="text-yellow-300 pl-2 text-lg font-bold  py-1 z-10 overflow-hidden border-gray-300">
+                <div className="text-yellow-300 border-b-2 mt-2 border-yellow-300 pl-2 text-lg font-bold  py-1 z-10 overflow-hidden">
                   Our Services
                 </div>
                 {ourServiceRoute.map((route, i) => (
@@ -528,8 +528,6 @@ function Dashboard(props) {
                     location.pathname === "/dashboard" + item.url && "#0909dc"
                   }`,
                 }}
-                onClick={() => setActiveMenu(item.label)}
-                // onClick={() => handleChangeQueryText(item.url, i)}
                 className="relative"
               >
                 <ListItemButton>
@@ -675,7 +673,7 @@ function Dashboard(props) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 2,
+          p: 1,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
         }}
       >

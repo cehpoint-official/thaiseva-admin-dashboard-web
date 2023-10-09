@@ -102,58 +102,43 @@ const DriverOnBoarding = () => {
 
           navigate("/dashboard");
 
-          const profileRef = ref(storage, `${createdUser.uid}-profile`); // firebase storage to store profile img
+          const profileRef = ref(storage, createdUser.uid + profile[0].name); // firebase storage to store profile img
           const licenceRef = ref(storage, `${createdUser.uid}-licence`); // firebase storage to store licence img
 
           // Uploading the profile image to storage
-          const profileTask = uploadBytesResumable(profileRef, profile[0]);
-          profileTask.on(
-            (error) => {
-              console.log(error.message);
-            },
-
-            async () => {
-              // getting the profile img url after uploading to the storage
-              await getDownloadURL(profileTask.snapshot.ref).then(
-                async (photoURL) => {
-                  await updateUserProfile(fullName, photoURL); //updating user name and photoURL
-                  await updateDoc(doc(usersCollection, createdUser.uid), {
-                    photoURL: photoURL,
-                  });
-                  serviceInfo.driverInformation.photoURL = photoURL; // adding profile URL
-                  await setDoc(
-                    doc(driversCollection, createdUser.uid),
-                    serviceInfo
-                  );
-                  // creating an empty chat conversation for the user.
-                  await setDoc(doc(db, "userChats", createdUser.uid), {});
-                }
-              );
-            }
+          const profileTask = await uploadBytesResumable(
+            profileRef,
+            profile[0]
           );
-
           // Uploading the driving licence to the storage
-          const licenceTask = uploadBytesResumable(
+          const licenceTask = await uploadBytesResumable(
             licenceRef,
             drivingLicence[0]
           );
-          licenceTask.on(
-            () => {},
-            async () => {
-              // getting the img url after uploading to the storage
-              await getDownloadURL(licenceTask.snapshot.ref).then(
-                async (licenceURL) => {
-                  // adding service's data to the partners collection
-                  serviceInfo.driverInformation.drivingLicence = licenceURL;
-                  if (licenceURL) {
-                    await updateDoc(doc(driversCollection, createdUser.uid), {
-                      serviceInfo,
-                    }).then(() => console.log("added driving licence"));
-                  }
-                }
-              );
-            }
-          );
+
+          // Get the download URL
+          const photoURL = await getDownloadURL(profileTask.ref);
+          const licenceURL = await getDownloadURL(licenceTask.ref);
+
+          if (photoURL) {
+            await updateUserProfile(fullName, photoURL); //updating user name and photoURL
+            await updateDoc(doc(usersCollection, createdUser.uid), {
+              photoURL: photoURL,
+            });
+
+            serviceInfo.driverInformation.photoURL = photoURL; // adding profile URL
+            await setDoc(doc(driversCollection, createdUser.uid), serviceInfo);
+          }
+
+          if (licenceURL) {
+            console.log("Licence is Uploaded successfully", licenceURL);
+            // adding service's data to the partners collection
+            serviceInfo.driverInformation.drivingLicence = licenceURL;
+
+            await updateDoc(doc(driversCollection, createdUser.uid), {
+              serviceInfo,
+            });
+          }
         }
       })
       .catch((error) => console.log(error));

@@ -1,10 +1,10 @@
 import { useContext } from "react";
-import { ChatContext } from "../../../../contextAPIs/ChatProvider";
-import Input from "../../communication/Input";
 import Messages from "./Messages";
+import { PartnerChatContext } from "../../../../contextAPIs/PartnerChatProvider";
+import PartnerChatInput from "./PartnerChatInput";
 
-const Chat = () => {
-  const { data } = useContext(ChatContext);
+const PartnerChats = () => {
+  const { data } = useContext(PartnerChatContext);
 
   return (
     <div className="w-full h-full">
@@ -17,9 +17,9 @@ const Chat = () => {
         <p className="font-bold text-white">{data?.oppositeUser.displayName}</p>
       </div>
       <Messages />
-      <Input />
+      <PartnerChatInput />
     </div>
   );
 };
 
-export default Chat;
+export default PartnerChats;
