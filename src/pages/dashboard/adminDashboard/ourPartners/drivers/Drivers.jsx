@@ -374,6 +374,14 @@ const Drivers = () => {
               {driverDetails?.paymentInformation?.bankAddress}
             </Grid>
           </Grid>
+          <div>
+            <span className="font-bold"> Driving Licence: </span>
+            <img
+              src={driverDetails?.driverInformation?.drivingLicence}
+              alt=""
+              className="w-3/4 h-60 mx-auto"
+            />
+          </div>
 
           {/* Permission */}
           <SubTitle text="Permission" />

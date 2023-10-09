@@ -1,12 +1,17 @@
 import { useContext } from "react";
 import { AuthContext } from "../contextAPIs/AuthProvider";
 import PendingPartnership from "../components/PendingPartnership";
+import Loading from "../components/Loading";
 
 const PartnerRoute = ({ children }) => {
   const { userData, loadingUserData } = useContext(AuthContext);
 
   if (loadingUserData) {
-    return <h3>Loading..</h3>;
+    return (
+      <h3>
+        <Loading />
+      </h3>
+    );
   }
   //Returning account pending message
   if (userData.status === "Pending") {

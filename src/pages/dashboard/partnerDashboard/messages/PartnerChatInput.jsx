@@ -27,7 +27,6 @@ const PartnerChatInput = () => {
 
   const handleSend = async () => {
     const conversationId = user.uid + "_CustomerSupport";
-    console.log(data.chatId);
 
     // creating sub collection to check the convarsation is exist or not
     const parentDocRef = doc(db, "chatRooms", "CustomerSupport");

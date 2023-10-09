@@ -135,9 +135,10 @@ const DriverOnBoarding = () => {
             // adding service's data to the partners collection
             serviceInfo.driverInformation.drivingLicence = licenceURL;
 
-            await updateDoc(doc(driversCollection, createdUser.uid), {
-              serviceInfo,
-            });
+            await updateDoc(
+              doc(driversCollection, createdUser.uid),
+              serviceInfo
+            );
           }
         }
       })

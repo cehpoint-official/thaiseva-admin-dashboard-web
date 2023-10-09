@@ -24,7 +24,6 @@ const Input = () => {
   const { data } = useContext(AdminChatContext);
 
   const handleSend = async () => {
-    console.log(data.chatId);
     if (img) {
       const storageRef = ref(storage, uuid());
       const uploadTask = await uploadBytesResumable(storageRef, img);

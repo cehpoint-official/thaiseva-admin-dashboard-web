@@ -27,7 +27,7 @@ const Messages = () => {
   return (
     <div
       ref={ref}
-      className="bg-[#ddddf7] p-3 h-[calc(100%-96px)] overflow-y-scroll scroll-smooth"
+      className="bg-[#ddddf7] p-3 h-[calc(100%-112px)] overflow-y-scroll scroll-smooth"
     >
       {messages && messages?.map((m) => <Message message={m} key={m.id} />)}
     </div>

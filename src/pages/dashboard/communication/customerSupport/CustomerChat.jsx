@@ -1,14 +1,8 @@
-import Sidebar from "./Sidebar";
-import Chat from "./Chat";
-import { useContext, useState } from "react";
-import { AuthContext } from "../../../contextAPIs/AuthProvider";
+import Sidebar from "../Sidebar";
+import Chat from "../Chat";
+import { useState } from "react";
 
 const CustomerChat = () => {
-  /*   const { loading, isAdmin, logOut } = useContext(AuthContext);
-  console.log(loading, isAdmin);
-  if (!isAdmin) {
-    return logOut();
-  } */
   const [openSidebar, setOpenSidebar] = useState(false);
 
   return (

@@ -10,7 +10,7 @@ const Chat = ({ setOpenSidebar }) => {
 
   return (
     <div className="w-full h-full rounded-lg ">
-      <div className=" p-3 bg-[blue] z-10 flex items-center justify-between text-white">
+      <div className="p-3 bg-[blue] z-10 flex items-center justify-between text-white">
         <div className=" flex gap-2 items-center">
           <img
             src={data?.oppositeUser?.photoURL}

@@ -18,13 +18,15 @@ import FoodServices from "./../pages/dashboard/adminDashboard/ourServices/foodSe
 import RoomBookings from "../pages/dashboard/adminDashboard/clientOrders/roomBookings/RoomBookings";
 import Restaurants from "./../pages/dashboard/adminDashboard/ourPartners/restaurants/Restaurants";
 import Hotels from "./../pages/dashboard/adminDashboard/ourPartners/hotels/Hotels";
-import CustomerChat from "../pages/dashboard/communication/CustomerChat";
 import RestaurantOnboarding from "../pages/forms/RestaurantOnboarding";
 import HotelOnboarding from "../pages/forms/HotelOnboarding";
 import Drivers from "../pages/dashboard/adminDashboard/ourPartners/drivers/Drivers";
 import LocalPartners from "../pages/dashboard/adminDashboard/ourPartners/localPartners/LocalPartners";
 import TravelRequirements from "../pages/dashboard/adminDashboard/requirements/travelRequirements/TravelRequirements";
 import ChatWithAdmin from "../pages/dashboard/partnerDashboard/messages/ChatWithAdmin";
+import CustomerChat from "../pages/dashboard/communication/customerSupport/CustomerChat";
+import DriverSupport from "../pages/dashboard/communication/driverSupport/DriverSupport";
+import LocalPartnerSupport from "../pages/dashboard/communication/localPartnerSupport/LocalPartnerSupport";
 
 export const router = createBrowserRouter([
   {
@@ -151,6 +153,22 @@ export const router = createBrowserRouter([
         element: (
           <PrivetRouter>
             <CustomerChat />
+          </PrivetRouter>
+        ),
+      },
+      {
+        path: "/dashboard/driver-chat",
+        element: (
+          <PrivetRouter>
+            <DriverSupport />
+          </PrivetRouter>
+        ),
+      },
+      {
+        path: "/dashboard/partner-chat",
+        element: (
+          <PrivetRouter>
+            <LocalPartnerSupport />
           </PrivetRouter>
         ),
       },

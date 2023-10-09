@@ -188,19 +188,20 @@ function Dashboard(props) {
   if (isAdmin) {
     text = "Admin Dashboard";
   } else if (isPartner) {
-    text = "Partner Dashboard";
     if (userData.serviceCategory === "Restaurant") {
       text = "Restaurant Dashboard";
-    }
-    if (userData.serviceCategory === "Hotel") {
+    } else if (userData.serviceCategory === "Hotel") {
       text = "Hotel Dashboard";
+    } else if (userData.serviceCategory === "Driving") {
+      text = "Driver Dashboard";
+    } else {
+      text = "Partner Dashboard";
     }
   }
 
   const drawer = (
     <div className="bg-[blue] text-white dashboard-menu">
       <Toolbar>
-        {" "}
         <div className="text-2xl font-bold">Thaiseva</div>
       </Toolbar>
       <Divider />
@@ -498,9 +499,11 @@ function Dashboard(props) {
                           color: "white",
                           pl: 2,
                           m: 0,
-                          bgcolor: `${activeStatus === i && "#0909dc"}`,
+                          bgcolor: `${
+                            location.pathname === "/dashboard/" + item.link &&
+                            "#0909dc"
+                          }`,
                         }}
-                        // onClick={() => handleChangeQueryText(item.queryText, i)}
                       >
                         <ListItemButton className="space-x-2">
                           <span>{item.icon}</span>
@@ -517,7 +520,6 @@ function Dashboard(props) {
         {isPartner &&
           partnerNavRoutes.map((item, i) => (
             <Link to={`/dashboard${item.url}`} key={i}>
-              {" "}
               <ListItem
                 disablePadding
                 sx={{
@@ -541,7 +543,7 @@ function Dashboard(props) {
                       : "hidden"
                   }`}
                 ></div>
-              </ListItem>{" "}
+              </ListItem>
             </Link>
           ))}
       </List>

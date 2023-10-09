@@ -7,7 +7,7 @@ const PartnerChats = () => {
   const { data } = useContext(PartnerChatContext);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full  h-[calc(100vh-80px)] border-2 border-[#0000ff5a] rounded-lg overflow-hidden">
       <div className="h-16 p-3 flex gap-2 bg-[blue] items-center">
         <img
           src={data?.oppositeUser?.photoURL}
