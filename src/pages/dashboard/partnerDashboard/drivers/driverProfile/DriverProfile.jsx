@@ -1,5 +1,5 @@
-import { doc, updateDoc } from "firebase/firestore";
-import { useContext, useState } from "react";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { useContext, useEffect, useState } from "react";
 
 import {
   Box,
@@ -15,38 +15,41 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useForm } from "react-hook-form";
-import { isValidPhoneNumber } from "react-phone-number-input";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { PartnerContext } from "../../../../../contextAPIs/PartnerProvider";
 import { AuthContext } from "../../../../../contextAPIs/AuthProvider";
 import {
+  chatRoomsCollection,
   driversCollection,
-  storage,
   usersCollection,
 } from "../../../../../firebase/firebase.config";
 import PageHeading from "../../../../../components/PageHeading";
 import { successNotification } from "../../../../../components/Notifications";
+import { getFileUrl } from "../../../../../utils/utils";
 
-const DriverProfile = () => {
-  const { partnerDetails, setRefetch } = useContext(PartnerContext);
+const DriverProfile = ({ partnerDetails }) => {
+  const { setRefetch } = useContext(PartnerContext);
   const [profileEditModal, setProfileEditModal] = useState(false);
   const { user, updateUserProfile } = useContext(AuthContext);
-  const [error, setError] = useState("");
+  const [error, setError] = useState({ for: "", text: "" });
+  const [photoURL, setPhotoURL] = useState("");
   const {
     handleSubmit,
     register,
     formState: { errors },
   } = useForm();
 
+  useEffect(() => {
+    partnerDetails && setPhotoURL(partnerDetails?.driverInformation?.photoURL);
+  }, [partnerDetails]);
+
   /* ===============================================================
                           Handle Update Profile start
   ===============================================================*/
   // Handle form submission
   const handleUpdateProfile = async (data) => {
-    setError("");
+    setError({ for: "", text: "" });
     const {
       fullName,
-      profile,
       address,
       phoneNumber,
       numberPlate,
@@ -57,16 +60,13 @@ const DriverProfile = () => {
       bankAddress,
     } = data;
 
-    // validating phone number
-    const valid = isValidPhoneNumber(`+66 ${phoneNumber}`);
-    if (!valid) {
-      return setError("Invalid Number");
+    if (!photoURL) {
+      return setError({ for: "profile", text: "Profile is required" });
     }
 
-    let photoURL = partnerDetails.driverInformation.photoURL || "";
     const driverInformation = {
       email: partnerDetails.driverInformation.email,
-      drivingLicence: partnerDetails.driverInformation.drivingLicence,
+      license: partnerDetails.driverInformation.license,
       fullName,
       photoURL,
       phoneNumber,
@@ -88,75 +88,76 @@ const DriverProfile = () => {
     // adding users data to the useres collection
     await updateDoc(doc(usersCollection, user?.uid), {
       displayName: fullName,
-    }).catch((error) => console.log(error));
+      photoURL,
+    });
 
-    await updateDoc(doc(driversCollection, user?.uid), updatedInfo);
+    await updateUserProfile(fullName, photoURL); //updating user name and photoURL
+    await updateDoc(doc(driversCollection, user?.uid), updatedInfo).then(() => {
+      successNotification("Profile updated successfully.", "success");
+      setRefetch((p) => !p);
+    });
 
-    const storageRef = ref(storage, user?.uid); // firebase storage to store profile img
-
-    if (profile.length) {
-      // Uploading the image to storage
-      const uploadTask = uploadBytesResumable(storageRef, profile[0]);
-      uploadTask.on(
-        (error) => {
-          console.log(error.message);
-        },
-
-        async () => {
-          // getting the img url after uploading to the storage
-          await getDownloadURL(uploadTask.snapshot.ref).then(async (imgURL) => {
-            await updateUserProfile(fullName, imgURL); //updating user name and photoURL
-
-            updatedInfo.driverInformation.photoURL = imgURL;
-            // adding users data to the useres collection
-            await updateDoc(doc(usersCollection, user?.uid), {
-              photoURL: imgURL,
-            });
-
-            await updateDoc(
-              doc(driversCollection, user?.uid),
-              updatedInfo
-            ).then(() => setRefetch((prev) => !prev));
-          });
-        }
-      );
-    }
-    successNotification("Profile updated successfully.", "success");
-    setRefetch((prev) => !prev);
     setProfileEditModal(false);
+
+    await updateDoc(doc(chatRoomsCollection, "DriversSupport"), {
+      [user.uid + "_DriversSupport"]: {
+        userInfo: {
+          uid: user?.uid,
+          displayName: user?.displayName,
+          photoURL: photoURL,
+          phoneNumber,
+        },
+        isRead: true,
+        date: serverTimestamp(),
+      },
+    });
   };
   /* ===============================================================
                           Handle Update Profile End
   ===============================================================*/
 
+  // upload profile
+  const handleUploadProfile = async (e) => {
+    const { files } = e.target;
+    setError({ for: "", text: "" });
+    const result = await getFileUrl(files);
+    if (result?.error) {
+      setError({ for: "profile", text: result.message });
+    } else {
+      setPhotoURL(result.url);
+    }
+  };
+
   return (
     <div>
       <PageHeading text={"Partner's Profile"} />
-      <div className="border border-[blue] rounded p-5 lg:mx-20 my-5 bg-blue-100 shadow-lg shadow-[#0000006d] pb-5">
+      <div className="border border-[var(--primary-bg)] rounded p-5 lg:mx-20 my-5 bg-blue-100 shadow-lg shadow-[#0000006d] pb-5">
         <div className="flex items-center justify-between mb-2 gap-2">
           <div className="inline-flex items-center gap-2 md:font-bold">
             <span className="md:block hidden">Service Category : </span>
-            <div className="bg-[blue] py-1  md:text-lg text-sm px-2 rounded text-white">
+            <div className="bg-[var(--primary-bg)] py-1  md:text-lg text-sm px-2 rounded text-white">
               {partnerDetails.serviceCategory}
             </div>
           </div>
-          <button
-            onClick={() => setProfileEditModal(true)}
-            className="text-[blue] py-1 px-2 md:text-lg text-sm inline-block rounded border-2 border-[blue]"
-          >
-            Edit Profile
-          </button>
+          {partnerDetails?.uid === user?.uid && (
+            <button
+              onClick={() => setProfileEditModal(true)}
+              className="text-[var(--primary-bg)] py-1 px-2 md:text-lg text-sm inline-block rounded border-2 border-[var(--primary-bg)]"
+            >
+              Edit Profile
+            </button>
+          )}
         </div>
         <img
           src={partnerDetails?.driverInformation?.photoURL}
           alt=""
-          className="md:w-60 md:h-60 w-40 h-40 rounded-full border-4 border-blue-500 mx-auto"
+          className="md:w-60 md:h-60 w-40 h-40 rounded-full border-4 border-[var(--primary-bg)] mx-auto"
         />
 
         {/* partner's details  */}
         <div className="flex md:flex-row flex-col flex-wrap gap-3 justify-between mt-3">
           <div className="mb-3 flex-1">
-            <h5 className="font-bold text-lg mb-2 text-[blue] border-b border-blue-500">
+            <h5 className="font-bold text-lg mb-2 text-[var(--primary-bg)] border-b border-[var(--primary-bg)]">
               Personal Information:{" "}
             </h5>
             <div className="space-y-1">
@@ -179,8 +180,8 @@ const DriverProfile = () => {
             </div>
           </div>
           <div className="mb-3 flex-1">
-            <h5 className="font-bold text-lg mb-2 text-[blue] border-b border-blue-500">
-              Service Information:{" "}
+            <h5 className="font-bold text-lg mb-2 text-[var(--primary-bg)] border-b border-[var(--primary-bg)]">
+              Service Information:
             </h5>
             <div className="space-y-1">
               <p>
@@ -198,7 +199,7 @@ const DriverProfile = () => {
             </div>
           </div>
           <div className="mb-3 flex-1">
-            <h5 className="font-bold text-lg mb-2 text-[blue] border-b border-blue-500">
+            <h5 className="font-bold text-lg mb-2 text-[var(--primary-bg)] border-b border-[var(--primary-bg)]">
               Payment Information:{" "}
             </h5>
             <div className="space-y-1">
@@ -217,10 +218,10 @@ const DriverProfile = () => {
             </div>
           </div>
         </div>
-        {/* driving licence */}
-        <span className="font-bold">Your Licence : </span>
+        {/* driving license */}
+        <span className="font-bold">Driving License : </span>
         <img
-          src={partnerDetails?.driverInformation?.drivingLicence}
+          src={partnerDetails?.driverInformation?.license}
           alt=""
           className="md:h-[60vh] md:w-3/4 mx-auto"
         />
@@ -275,12 +276,13 @@ const DriverProfile = () => {
                 <TextField
                   label="Select Profile Picture"
                   type="file"
-                  //   defaultValue={partnerDetails?.driverInformation?.photoURL}
-                  placeholder=""
                   fullWidth
                   InputLabelProps={{ shrink: true }}
-                  {...register("profile")}
+                  onChange={handleUploadProfile}
                 />
+                {error?.for === "profile" && (
+                  <span className="text-red-500">{error.text}</span>
+                )}
               </Grid>
 
               {/* Phone */}
@@ -293,7 +295,7 @@ const DriverProfile = () => {
                   fullWidth
                   {...register("phoneNumber", { required: true })}
                 />
-                {error.includes("Number") && (
+                {errors.phoneNumber && (
                   <span className="text-red-500">{error}</span>
                 )}
               </Grid>
@@ -304,7 +306,6 @@ const DriverProfile = () => {
                   label="Address"
                   type="text"
                   defaultValue={partnerDetails?.driverInformation?.address}
-                  // placeholder="Type your current address."
                   fullWidth
                   {...register("address", { required: true })}
                 />

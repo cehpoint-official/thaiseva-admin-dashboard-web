@@ -1,14 +1,11 @@
-import AttachFileIcon from "@mui/icons-material/AttachFile";
 import InsertPhotoIcon from "@mui/icons-material/InsertPhoto";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { useState } from "react";
 import { v4 as uuid } from "uuid";
 import {
   Timestamp,
   arrayUnion,
-  collection,
   doc,
-  getDoc,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
@@ -16,75 +13,106 @@ import {
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { AuthContext } from "../../../../contextAPIs/AuthProvider";
 import { PartnerChatContext } from "../../../../contextAPIs/PartnerChatProvider";
-import { db, storage } from "../../../../firebase/firebase.config";
+import {
+  chatRoomsCollection,
+  chatsCollection,
+  storage,
+} from "../../../../firebase/firebase.config";
 
-const PartnerChatInput = () => {
+const PartnerChatInput = ({ audioUrl, setAudioUrl }) => {
   const [text, setText] = useState("");
-  const [img, setImg] = useState(null);
-
-  const { user, isAdmin } = useContext(AuthContext);
+  const [loading, setLoading] = useState(false);
+  const { user } = useContext(AuthContext);
   const { data } = useContext(PartnerChatContext);
+  let chatRoom = "";
+
+  if (data) {
+    chatRoom = data?.oppositeUser?.uid?.split("_")[1];
+  }
+  useEffect(() => {
+    const sendAudio = async () => {
+      const audioMessage = {
+        id: uuid(),
+        audioUrl,
+        text: "",
+        senderId: user.uid,
+        date: Timestamp.now(),
+      };
+
+      await updateDoc(doc(chatsCollection, data.chatId), {
+        messages: arrayUnion(audioMessage),
+      }).then(async () => {
+        setAudioUrl("");
+        await updateDoc(doc(chatRoomsCollection, chatRoom), {
+          [data.chatId + ".lastMessage"]: "",
+          [data.chatId + ".audioUrl"]: true,
+          [data.chatId + ".imgUrl"]: false,
+          [data.chatId + ".isRead"]: false,
+          [data.chatId + ".date"]: serverTimestamp(),
+        });
+      });
+    };
+
+    audioUrl && sendAudio();
+  }, [audioUrl]);
 
   const handleSend = async () => {
-    const conversationId = user.uid + "_CustomerSupport";
+    let newMessage = {
+      id: uuid(),
+      text,
+      senderId: user.uid,
+      date: Timestamp.now(),
+      imageUrl: "",
+    };
 
-    // creating sub collection to check the convarsation is exist or not
-    const parentDocRef = doc(db, "chatRooms", "CustomerSupport");
-    const subcollectionRef = collection(parentDocRef, "chatRooms");
-    const documentRef = doc(subcollectionRef, conversationId);
-
-    const querySnapshot = await getDoc(documentRef);
-
-    if (!querySnapshot.id) {
-      // creating conversation for thaiseva admin
-      await updateDoc(doc(db, "chatRooms", "CustomerSupport"), {
-        [conversationId + ".userInfo"]: {
-          uid: user.uid,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-        },
-        [conversationId + ".date"]: serverTimestamp(),
-      });
-    }
-
-    if (img) {
-      const storageRef = ref(storage, uuid());
-      const uploadTask = uploadBytesResumable(storageRef, img);
-
-      const imgURL = getDownloadURL(uploadTask.ref);
-
-      if (imgURL) {
-        await updateDoc(doc(db, "chats", data.chatId), {
-          messages: arrayUnion({
-            id: uuid(),
-            text,
-            senderId: user.uid,
-            date: Timestamp.now(),
-            img: imgURL,
-          }),
-        });
-      }
-    } else if (text.length > 0) {
-      await updateDoc(doc(db, "chats", data.chatId), {
-        messages: arrayUnion({
-          id: uuid(),
-          text,
-          senderId: user.uid,
-          date: Timestamp.now(),
-        }),
+    if (text.length > 0) {
+      await updateDoc(doc(chatsCollection, data.chatId), {
+        messages: arrayUnion(newMessage),
       });
     }
 
     // adding the last message to the thaiseva admin conversation
-    await updateDoc(doc(db, "chatRooms", "CustomerSupport"), {
+    await updateDoc(doc(chatRoomsCollection, chatRoom), {
       [data.chatId + ".lastMessage"]: {
         text,
       },
+      [data.chatId + ".imgUrl"]: false,
+      [data.chatId + ".audioUrl"]: false,
+      [data.chatId + ".isRead"]: false,
       [data.chatId + ".date"]: serverTimestamp(),
     });
 
     setText("");
-    setImg(null);
+  };
+
+  const handleSendImage = async (img) => {
+    if (img) {
+      setLoading(true);
+      const storageRef = ref(storage, uuid());
+      const uploadTask = await uploadBytesResumable(storageRef, img);
+
+      const imgURL = await getDownloadURL(uploadTask.ref);
+      if (imgURL) {
+        await updateDoc(doc(chatsCollection, data.chatId), {
+          messages: arrayUnion({
+            id: uuid(),
+            text: "",
+            senderId: user.uid,
+            date: Timestamp.now(),
+            imageUrl: imgURL,
+          }),
+        }).then(async () => {
+          setLoading(false);
+          await updateDoc(doc(chatRoomsCollection, chatRoom), {
+            [data.chatId + ".lastMessage"]: "",
+            [data.chatId + ".imgUrl"]: true,
+            [data.chatId + ".audioUrl"]: false,
+            [data.chatId + ".isRead"]: false,
+            [data.chatId + ".date"]: serverTimestamp(),
+          });
+        });
+      }
+    }
   };
 
   return (
@@ -97,13 +125,17 @@ const PartnerChatInput = () => {
         value={text}
       />
       <div className="flex gap-2 items-center">
-        <AttachFileIcon />
+        {loading && (
+          <span className="text-orange-500 text-xs block">
+            Sending image...
+          </span>
+        )}
         <input
           type="file"
           name=""
           id="img"
           className="hidden"
-          onChange={(e) => setImg(e.target.files[0])}
+          onChange={(e) => handleSendImage(e.target.files[0])}
         />
         <label htmlFor="img">
           <InsertPhotoIcon />

@@ -1,25 +1,41 @@
 import { Box, Button, Grid, Paper, TextField } from "@mui/material";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
-  db,
+  chatRoomsCollection,
+  chatsCollection,
   hotelsCollection,
-  storage,
   usersCollection,
 } from "../../firebase/firebase.config";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { useContext } from "react";
 import { AuthContext } from "../../contextAPIs/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import SubTitle from "../../components/SubTitle";
+import {
+  GoogleMap,
+  MarkerF,
+  StandaloneSearchBox,
+} from "@react-google-maps/api";
+import { getFileUrl, successNotification } from "../../utils/utils";
+
+const center = { lat: 48.8584, lng: 2.2945 };
 
 const HotelOnboarding = () => {
   const { createUser, updateUserProfile } = useContext(AuthContext);
-  const allowedExtensions = ["jpg", "jpeg", "png", "svg"];
-  const [logoError, setLogoError] = useState("");
-  const [licenceError, setLicenceError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [map, setMap] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [searchBox, setSearchBox] = useState(null);
+  const [logoURL, setLogoURL] = useState("");
+  const [license, setLicense] = useState("");
+  const [error, setError] = useState({ for: "", text: "" });
   const navigate = useNavigate();
 
   const {
@@ -30,22 +46,31 @@ const HotelOnboarding = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    setLogoError("");
-    setLicenceError("");
+    setError({ for: "", text: "" });
     setPasswordError("");
     const {
       email,
       password,
       hotelName,
       confirm,
-      logo,
       phoneNumber,
       address,
-      hotelLicence,
+      bankName,
+      accountNumber,
+      bankAddress,
     } = data;
 
     const accountInfo = { email, password };
-    const hotelInformation = { email, hotelName, address, phoneNumber };
+    const hotelInformation = {
+      email,
+      hotelName,
+      address,
+      phoneNumber,
+      location: location,
+      logoURL,
+      license,
+    };
+    const paymentInformation = { bankName, accountNumber, bankAddress };
 
     const hotelInfo = {
       accountInfo,
@@ -53,22 +78,21 @@ const HotelOnboarding = () => {
       verified: false,
       serviceCategory: "Hotel",
       hotelInformation,
+      paymentInformation,
     };
-
-    const logoExt = logo[0].name.split(".")[1];
-    const hotelLicenceExt = hotelLicence[0].name.split(".")[1];
-    const isValidLogo = allowedExtensions.includes(logoExt);
-    const isValidLicence = allowedExtensions.includes(hotelLicenceExt);
 
     if (password !== confirm) {
       return setPasswordError("Password doesn't matched");
-    } else if (!isValidLogo) {
-      return setLogoError("Allowed file extensions jpg, jpeg, png, svg");
-    } else if (!isValidLicence) {
-      return setLicenceError("Allowed file extensions jpg, jpeg, png, svg");
+    } else if (!logoURL) {
+      return setError({ for: "logo", text: "Logo is required" });
+    } else if (!license) {
+      return setError({ for: "license", text: "License is required" });
+    } else if (!location) {
+      return setError({
+        for: "location",
+        text: "Please select your hotel's location",
+      });
     }
-
-    // creating the user into Firebase authentication
 
     // creating the user into Firebase authentication
     await createUser(email, password)
@@ -76,77 +100,125 @@ const HotelOnboarding = () => {
         const createdUser = res.user;
 
         if (createdUser) {
+          hotelInfo.uid = createdUser.uid; // adding unique uid
+
           // adding users data to the useres collection
           await setDoc(doc(usersCollection, createdUser.uid), {
             email: email,
             displayName: hotelName,
             role: "Partner",
             status: "Pending",
+            photoURL: logoURL,
             serviceCategory: "Hotel",
             uid: createdUser.uid,
-          }).catch((error) => {
-            console.log(error);
           });
 
           navigate("/dashboard");
 
-          const logoRef = ref(storage, `${createdUser.uid}-profile`); // firebase storage to store profile img
+          await updateUserProfile(hotelName, logoURL);
 
-          // Uploading the profile image to storage
-          const logoTask = uploadBytesResumable(logoRef, logo[0]);
-          logoTask.on(
-            (error) => {
-              console.log(error.message);
-            },
-
-            async () => {
-              // getting the profile img url after uploading to the storage
-              await getDownloadURL(logoTask.snapshot.ref).then(
-                async (logoURL) => {
-                  await updateUserProfile(hotelName, logoURL); //updating user name and logoURL
-                  await updateDoc(doc(usersCollection, createdUser.uid), {
-                    photoURL: logoURL,
-                  });
-
-                  hotelInfo.uid = createdUser.uid; // adding unique uid
-                  hotelInfo.hotelInformation.logoURL = logoURL; // adding profile URL
-                  await setDoc(
-                    doc(hotelsCollection, createdUser.uid),
-                    hotelInfo
-                  );
-                }
-              );
-            }
+          await setDoc(doc(hotelsCollection, createdUser.uid), hotelInfo).then(
+            () => successNotification("Account created successfully")
           );
 
-          const licenceRef = ref(storage, `${createdUser.uid}-licence`); // firebase storage to store licence img
-          // Uploading the driving licence to the storage
-          const licenceTask = uploadBytesResumable(licenceRef, hotelLicence[0]);
-          licenceTask.on(
-            (error) => {
-              console.log(error.message);
-            },
+          const isRoom = await getDoc(doc(chatRoomsCollection, "HotelSupport"));
 
-            async () => {
-              // getting the img url after uploading to the storage
-              await getDownloadURL(licenceTask.snapshot.ref).then(
-                async (licenceURL) => {
-                  // adding service's data to the partners collection
+          if (!isRoom.exists()) {
+            // creating conversation for thaiseva admin
+            await setDoc(doc(chatRoomsCollection, "HotelSupport"), {
+              [createdUser.uid + "_HotelSupport"]: {
+                userInfo: {
+                  uid: createdUser?.uid,
+                  displayName: createdUser?.displayName,
+                  photoURL: createdUser?.photoURL,
+                  phoneNumber,
+                },
+                isRead: true,
+                date: serverTimestamp(),
+              },
+            });
+          } else {
+            // creating conversation for thaiseva admin
+            await updateDoc(doc(chatRoomsCollection, "HotelSupport"), {
+              [createdUser.uid + "_HotelSupport"]: {
+                userInfo: {
+                  uid: createdUser?.uid,
+                  displayName: createdUser?.displayName,
+                  photoURL: createdUser?.photoURL,
+                  phoneNumber,
+                },
+                isRead: true,
+                date: serverTimestamp(),
+              },
+            });
+          }
 
-                  hotelInfo.hotelInformation.licence = licenceURL;
-                  await updateDoc(
-                    doc(hotelsCollection, createdUser.uid),
-                    hotelInfo
-                  ).then(() =>
-                    console.log("successfully set to the driver's collection")
-                  );
-                }
-              );
-            }
+          await setDoc(
+            doc(chatsCollection, createdUser.uid + "_HotelSupport"),
+            { messages: [] }
           );
         }
       })
       .catch((error) => console.log(error));
+  };
+
+  /* ========================================================
+              Google maps functionalities Started
+ ======================================================== */
+  const onMapLoad = (map) => {
+    setMap(map);
+  };
+
+  const onMapClick = (e) => {
+    setLocation({
+      lat: e.latLng.lat(),
+      lng: e.latLng.lng(),
+    });
+  };
+
+  const onSearchLoad = (searchBox) => {
+    setSearchBox(searchBox);
+  };
+
+  const onPlacesChanged = () => {
+    const places = searchBox.getPlaces();
+
+    if (places.length === 0) return;
+
+    const location = places[0].geometry.location;
+
+    setLocation({
+      lat: location.lat(),
+      lng: location.lng(),
+    });
+    map.setCenter(location);
+  };
+  /* ========================================================
+              Google maps functionalities Ended
+ ======================================================== */
+
+  // upload pictures
+  const handleUploadLogo = async (e) => {
+    const { files } = e.target;
+    setError({ for: "", text: "" });
+    const result = await getFileUrl(files);
+    if (result?.error) {
+      setError({ for: "logo", text: result.message });
+    } else {
+      setLogoURL(result.url);
+    }
+  };
+
+  // upload licence
+  const handleUploadLicense = async (e) => {
+    const { files } = e.target;
+    setError({ for: "", text: "" });
+    const result = await getFileUrl(files);
+    if (result?.error) {
+      setError({ for: "license", text: result.message });
+    } else {
+      setLicense(result.url);
+    }
   };
 
   // custom text field for common data
@@ -168,24 +240,20 @@ const HotelOnboarding = () => {
     );
   };
 
-  // custom file field for profile and licence
-  const fileField = (label, name, fileError) => {
+  // custom file field for profile and license
+  const fileField = (label, name) => {
     return (
       <Grid item xs={12} sm={6} md={4}>
         <TextField
           label={"Select " + label}
           type="file"
-          defaultValue=""
-          placeholder=""
+          onChange={name === "logo" ? handleUploadLogo : handleUploadLicense}
           fullWidth
           InputLabelProps={{ shrink: true }}
-          {...register(name, { required: true })}
         />
-
-        {errors?.name && (
-          <span className="text-red-500">{label} is required</span>
+        {error?.for === name && (
+          <span className="text-red-500 text-sm">{error?.text}</span>
         )}
-        {fileError && <span className="text-red-500 text-sm">{fileError}</span>}
       </Grid>
     );
   };
@@ -198,7 +266,7 @@ const HotelOnboarding = () => {
         sx={{
           p: { xs: 2, sm: 3, md: 4, lg: 5 },
           mx: "auto",
-          width: { lg: "70%" },
+          width: { lg: "80%" },
         }}
       >
         <h3 className="text-center text-[blue] font-bold text-2xl mb-3">
@@ -265,7 +333,7 @@ const HotelOnboarding = () => {
             {textField("Hotel Name", "hotelName", "Enter The Hotel Name")}
 
             {/* Hotel Logo */}
-            {fileField("Hotel's Logo", "logo", logoError)}
+            {fileField("Hotel's Logo", "logo")}
 
             {/* Phone */}
             {textField("Phone Number", "phoneNumber", "12 345 6789")}
@@ -273,9 +341,52 @@ const HotelOnboarding = () => {
             {/* Location */}
             {textField("Location", "address", "Where is your hotel located?")}
 
-            {/* Hotel Licence */}
-            {fileField("Hotel Licence", "hotelLicence", licenceError)}
+            {/* Hotel License */}
+            {fileField("Hotel License", "license")}
           </Grid>
+
+          {/* Payment Information*/}
+          <SubTitle text="Payment Information :" />
+
+          <Grid container spacing={3}>
+            {/* Bank Name */}
+            {textField("Bank Name", "bankName", "Enter The Bank Name")}
+
+            {/* Account Number */}
+            {textField("Account Number", "accountNumber", "Account Number")}
+
+            {/* Bank Address */}
+            {textField("Bank Address", "bankAddress", "Bank Address")}
+          </Grid>
+
+          <SubTitle text="Select your hotel location: " />
+          {error?.for === "location" && (
+            <span className="text-red-500">{error?.text}</span>
+          )}
+          <div className="w-full h-[400px] my-4 relative">
+            <div className="absolute top-2 left-1/3 z-10 ">
+              <StandaloneSearchBox
+                onLoad={onSearchLoad}
+                onPlacesChanged={onPlacesChanged}
+              >
+                <input
+                  type="text"
+                  placeholder="Search for a location"
+                  className="location-input border border-blue-500"
+                />
+              </StandaloneSearchBox>
+            </div>
+            <GoogleMap
+              id="map"
+              center={center}
+              zoom={14}
+              onLoad={onMapLoad}
+              onClick={onMapClick}
+              mapContainerStyle={{ width: "100%", height: "100%" }}
+            >
+              {location && <MarkerF position={location} />}
+            </GoogleMap>
+          </div>
 
           <Box textAlign="center" sx={{ my: 2 }}>
             <Button type="submit" variant="contained" color="primary">

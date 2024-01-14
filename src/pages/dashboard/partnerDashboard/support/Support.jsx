@@ -22,7 +22,7 @@ const Support = () => {
               width: { xs: "100%", sm: "100%", md: "60%" },
             }}
           >
-            <h3 className="text-center text-[blue] font-bold md:text-xl mb-3">
+            <h3 className="text-center text-[var(--primary-bg)] font-bold md:text-xl mb-3">
               Need help? Write here we will response as soon as possible.
             </h3>
             <Box component="form" onSubmit={handleSubmit}>

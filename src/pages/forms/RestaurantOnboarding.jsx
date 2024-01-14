@@ -1,25 +1,33 @@
 import { Box, Button, Grid, Paper, TextField } from "@mui/material";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
-  db,
   restaurentsCollection,
-  storage,
   usersCollection,
 } from "../../firebase/firebase.config";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { useContext } from "react";
 import { AuthContext } from "../../contextAPIs/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import SubTitle from "../../components/SubTitle";
+import { getFileUrl, successNotification } from "../../utils/utils";
+import {
+  GoogleMap,
+  MarkerF,
+  StandaloneSearchBox,
+} from "@react-google-maps/api";
+
+const center = { lat: 48.8584, lng: 2.2945 };
 
 const RestaurantOnboarding = () => {
   const { createUser, updateUserProfile } = useContext(AuthContext);
-  const allowedExtensions = ["jpg", "jpeg", "png", "svg"];
-  const [logoError, setLogoError] = useState("");
-  const [licenceError, setLicenceError] = useState("");
+  const [logoURL, setLogoURL] = useState("");
+  const [license, setLicense] = useState("");
+  const [map, setMap] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [searchBox, setSearchBox] = useState(null);
   const [passwordError, setPasswordError] = useState("");
+  const [error, setError] = useState({ for: "", text: "" });
   const navigate = useNavigate();
 
   const {
@@ -30,8 +38,6 @@ const RestaurantOnboarding = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    setLogoError("");
-    setLicenceError("");
     setPasswordError("");
     const {
       email,
@@ -39,9 +45,12 @@ const RestaurantOnboarding = () => {
       restaurantName,
       phoneNumber,
       address,
-      logo,
       confirm,
-      restaurantLicence,
+      bankName,
+      accountNumber,
+      bankAddress,
+      coupon,
+      keywords,
     } = data;
 
     const accountInfo = { email, password };
@@ -50,26 +59,33 @@ const RestaurantOnboarding = () => {
       restaurantName,
       phoneNumber,
       address,
+      logoURL,
+      license,
+      coupon,
+      location,
+      keywords,
     };
+    const paymentInformation = { bankName, accountNumber, bankAddress };
 
     const restaurantInfo = {
       accountInfo,
       status: "Pending",
-      verified: false,
-      restaurantInformation,
+      serviceCategory: "Restaurant",
+      ...restaurantInformation,
+      paymentInformation,
     };
-
-    const logoExt = logo[0].name.split(".")[1];
-    const restaurantLicenceExt = restaurantLicence[0].name.split(".")[1];
-    const isValidLogo = allowedExtensions.includes(logoExt);
-    const isValidLicence = allowedExtensions.includes(restaurantLicenceExt);
 
     if (password !== confirm) {
       return setPasswordError("Password doesn't matched");
-    } else if (!isValidLogo) {
-      return setLogoError("Allowed file extensions jpg, jpeg, png, svg");
-    } else if (!isValidLicence) {
-      return setLicenceError("Allowed file extensions jpg, jpeg, png, svg");
+    } else if (!logoURL) {
+      return setError({ for: "logo", text: "Logo is required" });
+    } else if (!license) {
+      return setError({ for: "license", text: "License is required" });
+    } else if (!location) {
+      return setError({
+        for: "location",
+        text: "Please select your restaurant's location",
+      });
     }
 
     // creating the user into Firebase authentication
@@ -86,72 +102,81 @@ const RestaurantOnboarding = () => {
             status: "Pending",
             serviceCategory: "Restaurant",
             uid: createdUser.uid,
-          }).catch((error) => {
-            console.log(error);
           });
 
           navigate("/dashboard");
 
-          const logoRef = ref(storage, `${createdUser.uid}-profile`); // firebase storage to store profile img
+          await updateUserProfile(restaurantName, logoURL); //updating user name and logoURL
 
-          // Uploading the profile image to storage
-          const logoTask = uploadBytesResumable(logoRef, logo[0]);
-          logoTask.on(
-            (error) => {
-              console.log(error.message);
-            },
-
-            async () => {
-              // getting the profile img url after uploading to the storage
-              await getDownloadURL(logoTask.snapshot.ref).then(
-                async (logoURL) => {
-                  await updateUserProfile(restaurantName, logoURL); //updating user name and logoURL
-                  await updateDoc(doc(usersCollection, createdUser.uid), {
-                    photoURL: logoURL,
-                  });
-
-                  restaurantInfo.uid = createdUser.uid; // adding unique uid
-                  restaurantInfo.restaurantInformation.logoURL = logoURL; // adding profile URL
-                  await setDoc(
-                    doc(restaurentsCollection, createdUser.uid),
-                    restaurantInfo
-                  );
-                }
-              );
-            }
-          );
-
-          const licenceRef = ref(storage, `${createdUser.uid}-licence`); // firebase storage to store licence img
-          // Uploading the driving licence to the storage
-          const licenceTask = uploadBytesResumable(
-            licenceRef,
-            restaurantLicence[0]
-          );
-          licenceTask.on(
-            (error) => {
-              console.log(error.message);
-            },
-
-            async () => {
-              // getting the img url after uploading to the storage
-              await getDownloadURL(licenceTask.snapshot.ref).then(
-                async (licenceURL) => {
-                  // adding service's data to the partners collection
-
-                  restaurantInfo.restaurantInformation.licence = licenceURL;
-                  await updateDoc(
-                    doc(restaurentsCollection, createdUser.uid),
-                    restaurantInfo
-                  ).then(() =>
-                    console.log("successfully set to the driver's collection")
-                  );
-                }
-              );
-            }
+          restaurantInfo.uid = createdUser.uid;
+          await setDoc(
+            doc(restaurentsCollection, createdUser.uid),
+            restaurantInfo
+          ).then(() =>
+            successNotification("The account is created successfully.")
           );
         }
       })
       .catch((error) => console.log(error));
+  };
+
+  /* ========================================================
+              Google maps functionalities Started
+ ======================================================== */
+  const onMapLoad = (map) => {
+    setMap(map);
+  };
+
+  const onMapClick = (e) => {
+    setLocation({
+      lat: e.latLng.lat(),
+      lng: e.latLng.lng(),
+    });
+  };
+
+  const onSearchLoad = (searchBox) => {
+    setSearchBox(searchBox);
+  };
+
+  const onPlacesChanged = () => {
+    const places = searchBox.getPlaces();
+
+    if (places.length === 0) return;
+
+    const location = places[0].geometry.location;
+
+    setLocation({
+      lat: location.lat(),
+      lng: location.lng(),
+    });
+    map.setCenter(location);
+  };
+  /* ========================================================
+            Google maps functionalities Ended
+======================================================== */
+
+  // uploading the restaurant logo to get the url
+  const handleUploadLogo = async (e) => {
+    const { files } = e.target;
+    setError({ for: "", text: "" });
+    const result = await getFileUrl(files);
+    if (result?.error) {
+      setError({ for: "logo", text: result.message });
+    } else {
+      setLogoURL(result.url);
+    }
+  };
+
+  // upload pictures
+  const handleUploadLicense = async (e) => {
+    const { files } = e.target;
+    setError({ for: "", text: "" });
+    const result = await getFileUrl(files);
+    if (result?.error) {
+      setError({ for: "license", text: result.message });
+    } else {
+      setLicense(result.url);
+    }
   };
 
   // custom text field for common data
@@ -173,24 +198,20 @@ const RestaurantOnboarding = () => {
     );
   };
 
-  // custom file field for profile and licence
-  const fileField = (label, name, fileError) => {
+  // custom file field for profile and license
+  const fileField = (label, name) => {
     return (
       <Grid item xs={12} sm={6} md={4}>
         <TextField
           label={"Select " + label}
           type="file"
-          defaultValue=""
-          placeholder=""
           fullWidth
           InputLabelProps={{ shrink: true }}
-          {...register(name, { required: true })}
+          onChange={name === "logo" ? handleUploadLogo : handleUploadLicense}
         />
-
-        {errors?.name && (
-          <span className="text-red-500">{label} is required</span>
+        {error?.for === name && (
+          <span className="text-red-500 text-sm">{error?.text}</span>
         )}
-        {fileError && <span className="text-red-500 text-sm">{fileError}</span>}
       </Grid>
     );
   };
@@ -200,7 +221,11 @@ const RestaurantOnboarding = () => {
       {/* form container */}
       <Paper
         elevation={3}
-        sx={{ p: { xs: 2, sm: 3, md: 4, lg: 5 }, mx: "auto", width: "70%" }}
+        sx={{
+          p: { xs: 2, sm: 3, md: 4, lg: 5 },
+          mx: "auto",
+          width: { lg: "80%" },
+        }}
       >
         <h3 className="text-center text-[blue] font-bold text-2xl">
           Restaurant Onboarding Form
@@ -208,11 +233,11 @@ const RestaurantOnboarding = () => {
 
         <Box component="form" onSubmit={handleSubmit(onSubmit)}>
           {/* Account Information*/}
-          <SubTitle text="Account & Restaurant Information :" />
+          <SubTitle text="Account & Restaurant Information:" />
 
           <Grid container spacing={3} sx={{ py: 1 }}>
             {/* Email */}
-            {textField("Email", "email", "email", "example@gmail.com")}
+            {textField("Email", "email", "example@gmail.com")}
 
             {/* Password */}
             <Grid item xs={12} sm={6} md={4}>
@@ -261,31 +286,57 @@ const RestaurantOnboarding = () => {
                 <span className="text-red-500 text-sm">{passwordError}</span>
               )}
             </Grid>
-
-            {/* Restaurent Name */}
             {textField(
               "Restaurent Name",
               "restaurantName",
               "Enter The Restaurant Name"
             )}
-
-            {/* Restaurant Logo */}
-            {fileField("Restaurant Logo", "logo", logoError)}
-
-            {/* Phone */}
+            {fileField("Restaurant Logo", "logo", logoURL)}
             {textField("Phone Number", "phoneNumber", "12 345 6789")}
-
-            {/* Location */}
             {textField(
               "Location",
               "address",
               "Where is your restaurant located?"
             )}
-
-            {/* Restaurant Licence */}
-            {fileField("Restaurant Licence", "restaurantLicence", licenceError)}
+            {fileField("Restaurant License", "license", license)}
+            {textField("Keywords", "keywords", "Italian, Cheese, Korean")}
+            {textField("Coupon", "coupon", "THAISEVA10")}
           </Grid>
 
+          <SubTitle text="Payment Information :" />
+          <Grid container spacing={3}>
+            {textField("Bank Name", "bankName", "Enter The Bank Name")}
+            {textField("Account Number", "accountNumber", "Account Number")}
+            {textField("Bank Address", "bankAddress", "Bank Address")}
+          </Grid>
+          <SubTitle text="Select your Restaurant location: " />
+          {error?.for === "location" && (
+            <span className="text-red-500">{error?.text}</span>
+          )}
+          <div className="w-full h-[400px] my-4 relative">
+            <div className="absolute top-2 left-1/3 z-10 ">
+              <StandaloneSearchBox
+                onLoad={onSearchLoad}
+                onPlacesChanged={onPlacesChanged}
+              >
+                <input
+                  type="text"
+                  placeholder="Search for a location"
+                  className="location-input border border-blue-500"
+                />
+              </StandaloneSearchBox>
+            </div>
+            <GoogleMap
+              id="map"
+              center={center}
+              zoom={14}
+              onLoad={onMapLoad}
+              onClick={onMapClick}
+              mapContainerStyle={{ width: "100%", height: "100%" }}
+            >
+              {location && <MarkerF position={location} />}
+            </GoogleMap>
+          </div>
           <Box textAlign="center" sx={{ my: 2 }}>
             <Button type="submit" variant="contained" color="primary">
               Submit

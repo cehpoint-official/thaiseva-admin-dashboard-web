@@ -1,25 +1,30 @@
 import { Box, Button, Grid, Paper, TextField } from "@mui/material";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
-  db,
+  chatRoomsCollection,
+  chatsCollection,
   driversCollection,
-  storage,
   usersCollection,
 } from "../../firebase/firebase.config";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { useContext } from "react";
 import { AuthContext } from "../../contextAPIs/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import SubTitle from "../../components/SubTitle";
+import { getFileUrl } from "../../utils/utils";
 
 const DriverOnBoarding = () => {
   const { createUser, updateUserProfile } = useContext(AuthContext);
-  const allowedExtensions = ["jpg", "jpeg", "png", "svg"];
-  const [profileError, setProfileError] = useState("");
-  const [licenceError, setLicenceError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [error, setError] = useState({ for: "", text: "" });
+  const [photoURL, setPhotoURL] = useState("");
+  const [license, setLicense] = useState("");
   const navigate = useNavigate();
 
   const {
@@ -30,28 +35,31 @@ const DriverOnBoarding = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    setProfileError("");
-    setLicenceError("");
-    setPasswordError("");
+    setError({ for: "", text: "" });
     const {
       email,
       password,
       fullName,
-      profile,
       confirm,
       address,
       phoneNumber,
       numberPlate,
       serviceArea,
       vehicleType,
-      drivingLicence,
       bankName,
       accountNumber,
       bankAddress,
     } = data;
 
     const accountInfo = { email, password };
-    const driverInformation = { email, fullName, phoneNumber, address };
+    const driverInformation = {
+      email,
+      fullName,
+      phoneNumber,
+      address,
+      photoURL,
+      license,
+    };
     const vehicleInformation = { numberPlate, vehicleType };
     const paymentInformation = { bankName, accountNumber, bankAddress };
 
@@ -66,19 +74,12 @@ const DriverOnBoarding = () => {
       paymentInformation,
     };
 
-    const profileExt = profile[0].name.split(".")[1];
-    const drivingLicenceExt = drivingLicence[0].name.split(".")[1];
-    const isValidProfile = allowedExtensions.includes(profileExt);
-    const isValidLicence = allowedExtensions.includes(drivingLicenceExt);
-
     if (password !== confirm) {
-      return setPasswordError("Password doesn't matched");
-    } else if (!isValidProfile) {
-      console.log("error");
-      return setProfileError("Allowed file extensions jpg, jpeg, png, svg");
-    } else if (!isValidLicence) {
-      console.log("error");
-      return setLicenceError("Allowed file extensions jpg, jpeg, png, svg");
+      return setError({ for: "password", text: "Password doesn't matched" });
+    } else if (!photoURL) {
+      return setError({ for: "profile", text: "Profile is required" });
+    } else if (!license) {
+      return setError({ for: "license", text: "Driving license is required" });
     }
 
     // creating the user into Firebase authentication
@@ -101,48 +102,74 @@ const DriverOnBoarding = () => {
           serviceInfo.uid = createdUser.uid; // adding unique uid
 
           navigate("/dashboard");
+          await updateUserProfile(fullName, photoURL); //updating user name and photoURL
+          await setDoc(doc(driversCollection, createdUser.uid), serviceInfo);
 
-          const profileRef = ref(storage, createdUser.uid + profile[0].name); // firebase storage to store profile img
-          const licenceRef = ref(storage, `${createdUser.uid}-licence`); // firebase storage to store licence img
-
-          // Uploading the profile image to storage
-          const profileTask = await uploadBytesResumable(
-            profileRef,
-            profile[0]
-          );
-          // Uploading the driving licence to the storage
-          const licenceTask = await uploadBytesResumable(
-            licenceRef,
-            drivingLicence[0]
+          const hasRoom = await getDoc(
+            doc(chatRoomsCollection, "DriversSupport")
           );
 
-          // Get the download URL
-          const photoURL = await getDownloadURL(profileTask.ref);
-          const licenceURL = await getDownloadURL(licenceTask.ref);
-
-          if (photoURL) {
-            await updateUserProfile(fullName, photoURL); //updating user name and photoURL
-            await updateDoc(doc(usersCollection, createdUser.uid), {
-              photoURL: photoURL,
+          if (!hasRoom.exists()) {
+            // creating conversation for thaiseva admin
+            await setDoc(doc(chatRoomsCollection, "DriversSupport"), {
+              [createdUser.uid + "_DriversSupport"]: {
+                userInfo: {
+                  uid: createdUser?.uid,
+                  displayName: createdUser?.displayName,
+                  photoURL: createdUser?.photoURL,
+                  phoneNumber,
+                },
+                isRead: true,
+                date: serverTimestamp(),
+              },
             });
-
-            serviceInfo.driverInformation.photoURL = photoURL; // adding profile URL
-            await setDoc(doc(driversCollection, createdUser.uid), serviceInfo);
+          } else {
+            // creating conversation for thaiseva admin
+            await updateDoc(doc(chatRoomsCollection, "DriversSupport"), {
+              [createdUser.uid + "_DriversSupport"]: {
+                userInfo: {
+                  uid: createdUser?.uid,
+                  displayName: createdUser?.displayName,
+                  photoURL: createdUser?.photoURL,
+                  phoneNumber,
+                },
+                isRead: true,
+                date: serverTimestamp(),
+              },
+            });
           }
 
-          if (licenceURL) {
-            console.log("Licence is Uploaded successfully", licenceURL);
-            // adding service's data to the partners collection
-            serviceInfo.driverInformation.drivingLicence = licenceURL;
-
-            await updateDoc(
-              doc(driversCollection, createdUser.uid),
-              serviceInfo
-            );
-          }
+          await setDoc(
+            doc(chatsCollection, createdUser.uid + "_DriversSupport"),
+            { messages: [] }
+          );
         }
       })
       .catch((error) => console.log(error));
+  };
+
+  // upload profile
+  const handleUploadProfile = async (e) => {
+    const { files } = e.target;
+    setError({ for: "", text: "" });
+    const result = await getFileUrl(files);
+    if (result?.error) {
+      setError({ for: "profile", text: result.message });
+    } else {
+      setPhotoURL(result.url);
+    }
+  };
+
+  // upload licence
+  const handleUploadLicense = async (e) => {
+    const { files } = e.target;
+    setError({ for: "", text: "" });
+    const result = await getFileUrl(files);
+    if (result?.error) {
+      setError({ for: "license", text: result.message });
+    } else {
+      setLicense(result.url);
+    }
   };
 
   // custom text field for common data
@@ -164,24 +191,23 @@ const DriverOnBoarding = () => {
     );
   };
 
-  // custom file field for profile and licence
-  const fileField = (label, name, fileError) => {
+  // custom file field for profile and license
+  const fileField = (label, name) => {
     return (
       <Grid item xs={12} sm={6} md={4}>
         <TextField
           label={"Select " + label}
           type="file"
-          defaultValue=""
-          placeholder=""
           fullWidth
           InputLabelProps={{ shrink: true }}
-          {...register(name, { required: true })}
+          onChange={
+            name === "profile" ? handleUploadProfile : handleUploadLicense
+          }
         />
 
-        {errors?.name && (
-          <span className="text-red-500">{label} is required</span>
+        {error?.for === name && (
+          <span className="text-red-500">{error.text}</span>
         )}
-        {fileError && <span className="text-red-500 text-sm">{fileError}</span>}
       </Grid>
     );
   };
@@ -248,8 +274,8 @@ const DriverOnBoarding = () => {
                 fullWidth
                 {...register("confirm", { required: true })}
               />
-              {passwordError && (
-                <span className="text-red-500 text-sm">{passwordError}</span>
+              {error.for === "password" && (
+                <span className="text-red-500 text-sm">{error.text}</span>
               )}
             </Grid>
 
@@ -257,7 +283,7 @@ const DriverOnBoarding = () => {
             {textField("Full Name", "fullName", "Enter Your Full Name")}
 
             {/* Profile Picture */}
-            {fileField("Profile Picture", "profile", profileError)}
+            {fileField("Profile Picture", "profile")}
 
             {/* Phone */}
             {textField("Phone Number", "phoneNumber", "12 345 6789")}
@@ -265,8 +291,8 @@ const DriverOnBoarding = () => {
             {/* Address */}
             {textField("Address", "address", "Type your current address")}
 
-            {/* Driving Licence */}
-            {fileField("Driving Licence", "drivingLicence", licenceError)}
+            {/* Driving License */}
+            {fileField("Driving License", "drivingLicense")}
           </Grid>
 
           {/* Service Information*/}

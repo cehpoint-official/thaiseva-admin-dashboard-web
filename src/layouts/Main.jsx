@@ -3,8 +3,11 @@ import { Navigate, Outlet } from "react-router-dom";
 import { AuthContext } from "../contextAPIs/AuthProvider";
 
 const Main = () => {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
 
+  if (loading) {
+    return;
+  }
   if (user) {
     return <Outlet />;
   }

@@ -23,7 +23,6 @@ import {
   TablePagination,
   TableRow,
   TextField,
-  Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
@@ -32,10 +31,13 @@ import {
   partnersCollection,
   usersCollection,
 } from "../../../../../firebase/firebase.config";
-import Loading from "../../../../../components/Loading";
 import PageHeading from "../../../../../components/PageHeading";
 import ViewDetailsIcon from "../../../../../components/ViewDetailsIcon";
 import SubTitle from "../../../../../components/SubTitle";
+import LoadingContent from "../../../../../components/LoadingContent";
+import { item, successNotification } from "../../../../../utils/utils";
+import ServiceCategoryBtn from "../../../../../components/ServiceCategoryBtn";
+import { Link } from "react-router-dom";
 
 const LocalPartners = () => {
   const [page, setPage] = useState(0);
@@ -52,7 +54,7 @@ const LocalPartners = () => {
     loadingPartnerData,
   } = useContext(PartnerContext);
   const [matchedPartners, setMatchedPartners] = useState([]);
-  console.log(matchedPartners);
+
   useEffect(() => {
     setMatchedPartners(partners);
   }, [partners]);
@@ -119,17 +121,18 @@ const LocalPartners = () => {
     setPartnerDetails(data.data());
   };
 
+  // changing the status
   const handleChangeStatus = async (id) => {
     handleClose();
 
     const updatedStatus = { status: status };
 
     await updateDoc(doc(partnersCollection, id), updatedStatus);
-    await updateDoc(doc(usersCollection, id), updatedStatus);
+    await updateDoc(doc(usersCollection, id), updatedStatus).then(() => {
+      successNotification("Status is changed successfully");
+    });
     setRefetch((p) => !p);
-
     setPartnerDetails({});
-
     setStatus("Pending");
   };
 
@@ -167,12 +170,6 @@ const LocalPartners = () => {
               serach functionalities end
   =============================================================*/
 
-  const loadingContent = (
-    <div className="md:h-[40vh] w-full flex items-center justify-center">
-      <Loading />
-    </div>
-  );
-
   return (
     <div className="overflow-x-hidden">
       <PageHeading text="Local Partners" />
@@ -208,32 +205,40 @@ const LocalPartners = () => {
             type="search"
             placeholder="Partner's Name"
             fullWidth
-            defaultValue=""
             onChange={(e) => handleSearchByName(e.target.value)}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          {" "}
           <TextField
             label="Search By Service Area"
             type="search"
             placeholder="Type Location"
             fullWidth
-            defaultValue=""
             onChange={(e) => handleSearchByServiceArea(e.target.value)}
           />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <div className="flex items-center h-full justify-end">
+            <Link
+              to="/partner-onboarding"
+              className="py-1 px-2 rounded bg-[var(--primary-bg)] text-white"
+              target="_blank"
+            >
+              Add new Partner
+            </Link>
+          </div>
         </Grid>
       </Grid>
 
       <p className="my-2 font-bold">
         {matchedPartners.length + " " + queryText} partners available at{" "}
-        <span className="text-[blue]"> {queryCategory} </span>
+        <span className="text-[var(--primary-bg)]"> {queryCategory} </span>
         category
       </p>
       <Paper sx={{ width: "100%", overflowX: "hidden" }}>
         <TableContainer sx={{ maxHeight: 440, maxWidth: "87vw" }}>
           {loadingPartnerData ? (
-            loadingContent
+            <LoadingContent />
           ) : (
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
@@ -244,7 +249,7 @@ const LocalPartners = () => {
                       align="center"
                       style={{
                         width: column.width,
-                        color: "blue",
+                        color: "var(--primary-bg)",
                         fontWeight: "bold",
                       }}
                     >
@@ -316,8 +321,7 @@ const LocalPartners = () => {
         />
       </Paper>
 
-      {/* modal  */}
-
+      {/* View partner details modal  */}
       <Dialog
         open={viewDetailsModal}
         onClose={handleClose}
@@ -341,38 +345,27 @@ const LocalPartners = () => {
 
         {/* modal body */}
         <DialogContent dividers sx={{ p: { xs: 2, md: 4 } }}>
-          <div className="flex justify-between">
-            <Typography variant="div">
-              <span className="font-bold">Category : </span>{" "}
-              <span className="bg-[blue] text-white font-bold py-1 px-2 rounded inline-block">
-                {partnerDetails.serviceCategory}
-              </span>
-            </Typography>
+          <div className="flex sm:flex-row flex-col gap-2 justify-between">
+            <ServiceCategoryBtn value={partnerDetails.serviceCategory} />
 
             <img
               src={partnerDetails?.personalInformation?.photoURL}
               alt=""
-              className="w-32 h-32 border-2 border-blue-500"
+              className="w-36 h-32 border-2 border-[var(--primary-bg)] rounded"
             />
           </div>
 
           {/* Personal Information */}
-          <SubTitle text=" Personal Information" />
+          <SubTitle text="Personal Information" />
 
           <Divider />
           <Grid container spacing={0.5} sx={{ mb: 2, mt: 0.5 }}>
-            <Grid item xs={12} sm={6} md={6}>
-              <span className="font-bold">Email: </span>
-              {partnerDetails?.personalInformation?.email}
-            </Grid>
-            <Grid item xs={12} sm={6} md={6}>
-              <span className="font-bold">Phone Number: </span>{" "}
-              {partnerDetails?.personalInformation?.phoneNumber}
-            </Grid>
-            <Grid item xs={12} sm={6} md={6}>
-              <span className="font-bold">Address: </span>
-              {partnerDetails?.personalInformation?.address}
-            </Grid>
+            {item("Email", partnerDetails?.personalInformation?.email)}
+            {item(
+              "Phone Number",
+              partnerDetails?.personalInformation?.phoneNumber
+            )}
+            {item("Address", partnerDetails?.personalInformation?.address)}
           </Grid>
 
           {/* Service Information */}
@@ -380,31 +373,43 @@ const LocalPartners = () => {
 
           <Divider />
           <Grid container spacing={0.5} sx={{ mb: 2, mt: 0.5 }}>
-            <Grid item xs={12} sm={6} md={6}>
-              <span className="font-bold">Service Area :</span>{" "}
-              {partnerDetails?.serviceInformation?.serviceArea}
-            </Grid>
-            {(partnerDetails.serviceCategory === "Legal Administrative" ||
-              partnerDetails.serviceCategory === "Official Work") && (
-              <Grid item xs={12} sm={6} md={6}>
-                <span className="font-bold">Education : </span>
-                {partnerDetails?.serviceInformation?.educationalBackground}
-              </Grid>
+            {item(
+              "Service Area",
+              partnerDetails?.serviceInformation?.serviceArea
             )}
+
             {(partnerDetails.serviceCategory === "Legal Administrative" ||
-              partnerDetails.serviceCategory === "Official Work") && (
-              <Grid item xs={12} sm={6} md={6}>
-                <span className="font-bold">Experience: </span>
-                {partnerDetails?.serviceInformation?.experienceYears} years
-              </Grid>
-            )}
+              partnerDetails.serviceCategory === "Official Work") &&
+              item(
+                "Education",
+                partnerDetails?.serviceInformation?.educationalBackground
+              )}
+
             {(partnerDetails.serviceCategory ===
               "Logistics and Transportation" ||
               partnerDetails.serviceCategory === "Order Pick Up") && (
-              <Grid item xs={12} sm={6} md={6}>
-                <span className="font-bold">Number of Vehicles : </span>
-                {partnerDetails?.serviceInformation?.numberOfVehicles}
-              </Grid>
+              <>
+                {item(
+                  "Number of Vehicles",
+                  partnerDetails?.serviceInformation?.numberPlate
+                )}
+
+                <Grid item xs={12} sm={6}>
+                  <h4 className="font-bold">Name of Vehicles: </h4>
+                  <div className="flex flex-wrap gap-1">
+                    {partnerDetails?.serviceInformation?.vechicleNames?.map(
+                      (item) => (
+                        <span
+                          key={item}
+                          className="bg-white py-1 px-2 rounded border border-[var(--primary-bg)]"
+                        >
+                          {item}
+                        </span>
+                      )
+                    )}
+                  </div>
+                </Grid>
+              </>
             )}
           </Grid>
 
@@ -412,18 +417,15 @@ const LocalPartners = () => {
           <SubTitle text="Payment Information" />
 
           <Grid container spacing={0.5} sx={{ mb: 2, mt: 0.5 }}>
-            <Grid item xs={12} sm={6} md={6}>
-              <span className="font-bold"> Bank Name : </span>
-              {partnerDetails?.paymentInformation?.bankName}
-            </Grid>
-            <Grid item xs={12} sm={6} md={6}>
-              <span className="font-bold"> Account Number : </span>
-              {partnerDetails?.paymentInformation?.accountNumber}
-            </Grid>
-            <Grid item xs={12} sm={6} md={6}>
-              <span className="font-bold"> Bank Location: </span>
-              {partnerDetails?.paymentInformation?.bankAddress}
-            </Grid>
+            {item("Bank Name", partnerDetails?.paymentInformation?.bankName)}
+            {item(
+              "Account Numbere",
+              partnerDetails?.paymentInformation?.accountNumber
+            )}
+            {item(
+              "Bank Location",
+              partnerDetails?.paymentInformation?.bankAddress
+            )}
           </Grid>
 
           {/* Permission */}
@@ -449,7 +451,7 @@ const LocalPartners = () => {
                 <Select
                   labelId="status-label"
                   label="Change Status"
-                  defaultValue="Pending"
+                  defaultValue={status}
                   onChange={(e) => setStatus(e.target.value)}
                 >
                   <MenuItem value="Pending">Pending</MenuItem>

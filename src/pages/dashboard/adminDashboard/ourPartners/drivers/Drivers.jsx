@@ -1,7 +1,8 @@
-import { deleteDoc, doc, getDoc, updateDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 import { useContext, useEffect, useState } from "react";
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -26,15 +27,23 @@ import {
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import {
   driversCollection,
+  travelRequirementsCollection,
   usersCollection,
 } from "../../../../../firebase/firebase.config";
 import Loading from "../../../../../components/Loading";
 import { PartnerContext } from "../../../../../contextAPIs/PartnerProvider";
 import SubTitle from "../../../../../components/SubTitle";
 import ViewDetailsIcon from "../../../../../components/ViewDetailsIcon";
+import PageHeading from "../../../../../components/PageHeading";
+import DeleteButton from "../../../../../components/DeleteButton";
+import ServiceCategoryBtn from "../../../../../components/ServiceCategoryBtn";
+import { successNotification } from "../../../../../utils/utils";
+import AddTaskIcon from "@mui/icons-material/AddTask";
+import PersonIcon from "@mui/icons-material/Person";
+import { v4 as uuid } from "uuid";
+import { Link } from "react-router-dom";
 
 const Drivers = () => {
   const [page, setPage] = useState(0);
@@ -42,11 +51,12 @@ const Drivers = () => {
   const [viewDetailsModal, setViewDetailsModal] = useState(false); //Add service modal
   const [driverDetails, setDriverDetails] = useState({});
   const [status, setStatus] = useState("Pending");
-
+  const [error, setError] = useState({ for: "", text: "" });
   const { drivers, setRefetch, queryText, loadingPartnerData } =
     useContext(PartnerContext);
+  const [openAddRequirementModal, setOpenAddRequirementModal] = useState(false);
   const [matchedDrivers, setMatchedDrivers] = useState([]);
-  console.log(drivers);
+
   useEffect(() => {
     setMatchedDrivers(drivers);
   }, [drivers]);
@@ -77,8 +87,15 @@ const Drivers = () => {
   ];
 
   // creating single row
-  function createData(name, phoneNumber, serviceArea, status, id) {
-    return { name, phoneNumber, serviceArea, status, id };
+  function createData(
+    name,
+    phoneNumber,
+    serviceArea,
+    status,
+    id,
+    serviceCategory
+  ) {
+    return { name, phoneNumber, serviceArea, status, id, serviceCategory };
   }
 
   // calling createData function with partner's data
@@ -88,7 +105,8 @@ const Drivers = () => {
       driver.driverInformation?.phoneNumber,
       driver.serviceArea,
       driver.status,
-      driver.uid
+      driver.uid,
+      driver.serviceCategory
     );
   });
 
@@ -113,6 +131,7 @@ const Drivers = () => {
     setDriverDetails(data.data());
   };
 
+  // change driver account status
   const handleChangeStatus = async (id) => {
     handleClose();
 
@@ -127,6 +146,7 @@ const Drivers = () => {
     setStatus("Pending");
   };
 
+  // delete driver
   const handleDelete = async (id) => {
     await deleteDoc(doc(driversCollection, id)); // deleting partner data from partners collection
     await deleteDoc(doc(usersCollection, id)); // deleting partner data from user's collection
@@ -157,6 +177,67 @@ const Drivers = () => {
               serach functionalities end
   =============================================================*/
 
+  const handleOpenAddRequirementModal = async (id) => {
+    setError({ for: "", text: "" });
+    const data = await getDoc(doc(driversCollection, id));
+    setDriverDetails(data.data());
+    setOpenAddRequirementModal(true);
+  };
+
+  // storing the requrement in the database
+  const handleAddRequirement = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    const requirementTitle = e.target.requirementTitle.value;
+    const requirementText = e.target.requirementText.value;
+    const locationName = e.target.locationName.value;
+    const locationURL = e.target.locationURL.value;
+    const clientName = e.target.clientName.value;
+    const clientNumber = e.target.clientNumber.value;
+
+    if (requirementTitle?.length < 5) {
+      return setError({ for: "title", text: "Invalid Requirement Title" });
+    } else if (requirementText?.length < 10) {
+      return setError({ for: "description", text: "Invalid Requirement Text" });
+    } else if (!clientName) {
+      return setError({ for: "clientName", text: "Client Name is required" });
+    } else if (!clientNumber) {
+      return setError({ for: "number", text: "Client Number is required" });
+    }
+
+    // todo: add service area and location url
+    const id = uuid();
+    const date = new Date();
+
+    const requirement = {
+      id,
+      date,
+      providerUid: driverDetails.uid,
+      serviceCategory: driverDetails.serviceCategory,
+      requirementTitle,
+      requirementText,
+      providerPhone: driverDetails.driverInformation.phoneNumber,
+      providerName: driverDetails.driverInformation.fullName,
+      isCompleted: false,
+      isChecked: false,
+      locationName,
+      locationURL,
+      clientName,
+      clientNumber,
+      comment: "",
+    };
+
+    await setDoc(doc(travelRequirementsCollection, id), requirement).then(
+      () => {
+        setOpenAddRequirementModal(false);
+        successNotification("Requirement is added successfully");
+      }
+    );
+
+    e.target.reset();
+  };
+
   const loadingContent = (
     <div className="md:h-[40vh] w-full flex items-center justify-center">
       <Loading />
@@ -165,6 +246,7 @@ const Drivers = () => {
 
   return (
     <div className="overflow-x-hidden">
+      <PageHeading text="Drivers" />
       <Grid container spacing={0.5} sx={{ mb: 2, mt: 0.5 }}>
         <Grid item xs={12} sm={6} md={3}>
           <TextField
@@ -187,6 +269,17 @@ const Drivers = () => {
             onChange={(e) => handleSearchByServiceArea(e.target.value)}
           />
         </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <div className="flex h-full items-center justify-end">
+            <Link
+              to="/driver-onboarding"
+              className="py-1 px-2 rounded bg-[var(--primary-bg)] text-white"
+              target="_blank"
+            >
+              Add new Partner
+            </Link>
+          </div>
+        </Grid>
       </Grid>
 
       <p className="my-2 font-bold">
@@ -206,7 +299,7 @@ const Drivers = () => {
                       align="center"
                       style={{
                         width: column.width,
-                        color: "blue",
+                        color: "var(--primary-bg)",
                         fontWeight: "bold",
                       }}
                     >
@@ -244,16 +337,34 @@ const Drivers = () => {
                                     <div
                                       onClick={() => handleViewDetails(row.id)}
                                     >
-                                      <ViewDetailsIcon />
+                                      <ViewDetailsIcon title="View Details" />
                                     </div>
+                                    {queryText === "Verified" && (
+                                      <button
+                                        onClick={() =>
+                                          handleOpenAddRequirementModal(row.id)
+                                        }
+                                        className="bg-orange-400 text-white p-1 rounded ml-2"
+                                      >
+                                        <AddTaskIcon />
+                                      </button>
+                                    )}
                                     {queryText === "Denied" && (
                                       <button
                                         onClick={() => handleDelete(row.id)}
                                         className="bg-red-600 text-white p-1 rounded ml-2"
                                       >
-                                        <DeleteForeverIcon />
+                                        <DeleteButton />
                                       </button>
                                     )}
+
+                                    <Link
+                                      to={`/dashboard/profile/${row.serviceCategory}/${row.id}`}
+                                    >
+                                      <button className="bg-slate-300 p-1 rounded ml-2">
+                                        <PersonIcon />
+                                      </button>
+                                    </Link>
                                   </div>
                                 )) ||
                                 value}
@@ -306,7 +417,7 @@ const Drivers = () => {
           <div className="flex justify-between">
             <Typography variant="div">
               <span className="font-bold">Category : </span>{" "}
-              <span className="bg-[blue] text-white font-bold py-1 px-2 rounded inline-block">
+              <span className="bg-[var(--primary-bg)] text-white font-bold py-1 px-2 rounded inline-block">
                 {driverDetails?.serviceCategory}
               </span>
             </Typography>
@@ -314,7 +425,7 @@ const Drivers = () => {
             <img
               src={driverDetails?.driverInformation?.photoURL}
               alt=""
-              className="w-32 h-32 border-2 border-blue-500"
+              className="w-32 h-32 border-2 border-[var(--primary-bg)]"
             />
           </div>
 
@@ -375,9 +486,9 @@ const Drivers = () => {
             </Grid>
           </Grid>
           <div>
-            <span className="font-bold"> Driving Licence: </span>
+            <span className="font-bold"> Driving License: </span>
             <img
-              src={driverDetails?.driverInformation?.drivingLicence}
+              src={driverDetails?.driverInformation?.license}
               alt=""
               className="w-3/4 h-60 mx-auto"
             />
@@ -421,12 +532,149 @@ const Drivers = () => {
           <Button
             variant="contained"
             autoFocus
-            sx={{ bgcolor: "blue", color: "white", hover: "none" }}
+            sx={{ bgcolor: "var(--primary-bg)", color: "white", hover: "none" }}
             onClick={() => handleChangeStatus(driverDetails.uid)}
           >
             Save
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Add requirement modal */}
+      <Dialog
+        open={openAddRequirementModal}
+        onClose={() => setOpenAddRequirementModal(false)}
+        aria-labelledby="responsive-dialog-title"
+      >
+        <Box component="form" onSubmit={handleAddRequirement}>
+          <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
+            Add Requirement
+          </DialogTitle>
+          <IconButton
+            aria-label="close"
+            onClick={() => setOpenAddRequirementModal(false)}
+            sx={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              color: "gray",
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+
+          {/* modal body */}
+          <DialogContent dividers sx={{ p: { xs: 2, md: 2 } }}>
+            <ServiceCategoryBtn value={driverDetails?.serviceCategory} />
+
+            <p>
+              You are giving the task to{" "}
+              {driverDetails?.driverInformation?.fullName}.
+            </p>
+
+            <Grid container spacing={2} sx={{ mb: 2, mt: 0.5 }}>
+              {/* Requirement Title */}
+              <Grid item xs={12}>
+                <TextField
+                  label="Requirement Title "
+                  type="text"
+                  name="requirementTitle"
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="Give a relevant name for the Requirement."
+                  fullWidth
+                />
+                {error.for === "title" && (
+                  <span className="text-red-500 text-sm">{error.text}</span>
+                )}
+              </Grid>
+
+              {/* location */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Client location name"
+                  type="text"
+                  name="locationName"
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="Type client location name"
+                  fullWidth
+                />
+              </Grid>
+
+              {/* location url */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Client location URL"
+                  type="text"
+                  name="locationURL"
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="Give Client location URL"
+                  fullWidth
+                />
+              </Grid>
+
+              {/* Client's Name */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Client's Name"
+                  type="text"
+                  name="clientName"
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="Client's Name"
+                  fullWidth
+                />
+                {error.for === "clientName" && (
+                  <span className="text-red-500 text-sm">{error.text}</span>
+                )}
+              </Grid>
+
+              {/* Client's Number */}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Client's Number"
+                  type="number"
+                  name="clientNumber"
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="Phone Number"
+                  fullWidth
+                />
+                {error.for === "number" && (
+                  <span className="text-red-500 text-sm">{error.text}</span>
+                )}
+              </Grid>
+
+              {/* Requirement Description */}
+              <Grid item xs={12}>
+                <TextField
+                  label="Requirement Description"
+                  type="text"
+                  name="requirementText"
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="Type the requirement in detail."
+                  multiline
+                  rows={3}
+                  fullWidth
+                />
+                {error.for === "description" && (
+                  <span className="text-red-500 text-sm">{error.text}</span>
+                )}
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              type="submit"
+              autoFocus
+              sx={{
+                bgcolor: "var(--primary-bg)",
+                color: "white",
+                hover: "none",
+              }}
+            >
+              Send
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
     </div>
   );

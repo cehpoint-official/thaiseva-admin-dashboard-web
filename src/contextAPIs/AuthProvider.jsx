@@ -8,8 +8,8 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth";
-import { getDocs, query, where } from "firebase/firestore";
-export const AuthContext = createContext(null);
+import { onSnapshot, query, where } from "firebase/firestore";
+export const AuthContext = createContext();
 const auth = getAuth(app);
 
 const AuthProvider = ({ children }) => {
@@ -17,35 +17,9 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isPartner, setIsPatner] = useState(false);
+  const [isSubAdmin, setIsSubAdmin] = useState(false);
   const [isVerifiedPartner, setIsVerifiedPartner] = useState(false);
-  const [loadingUserData, setLoadingUserData] = useState(true);
   const [userData, setUserData] = useState({});
-
-  useEffect(() => {
-    const loadUser = async (user) => {
-      setLoadingUserData(true);
-      if (user?.email) {
-        const res = await getDocs(
-          query(usersCollection, where("email", "==", user.email))
-        );
-        const userData = res.docs[0]?.data();
-        // const data = setPartnerDetails({ id: data.id, ...data.data() });
-        if (userData?.role === "Admin") {
-          setIsVerifiedPartner(false);
-          setIsAdmin(true);
-          setLoadingUserData(false);
-        } else if (userData?.role === "Partner") {
-          setIsAdmin(false);
-          setIsPatner(true);
-          setUserData(userData);
-          userData?.status === "Verified" && setIsVerifiedPartner(true);
-          setLoadingUserData(false);
-        }
-      }
-    };
-
-    user && loadUser(user);
-  }, [user]);
 
   // creating user with email and password
   const createUser = (email, password) => {
@@ -59,9 +33,6 @@ const AuthProvider = ({ children }) => {
 
   // logout user
   const logOut = () => {
-    setIsAdmin(false);
-    setIsPatner(false);
-    setLoading(false);
     return signOut(auth);
   };
 
@@ -75,10 +46,38 @@ const AuthProvider = ({ children }) => {
 
   //   observing the user
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         setLoading(false);
+
+        const unSub = onSnapshot(
+          query(usersCollection, where("uid", "==", currentUser?.uid)),
+          (result) => {
+            const user = result?.docs[0]?.data();
+            if (user?.role === "Admin") {
+              setIsAdmin(true);
+            } else if (user?.role === "Partner") {
+              setIsPatner(true);
+              setUserData(user);
+              user?.status === "Verified" && setIsVerifiedPartner(true);
+            } else if (user?.role === "Sub Admin") {
+              setIsSubAdmin(true);
+            }
+          }
+        );
+        return () => {
+          unSub();
+        };
+      } else {
+        setUser(null);
+        setLoading(false);
+        setUserData(null);
+        setIsAdmin(false);
+        setIsPatner(false);
+        setIsSubAdmin(false);
+        localStorage.removeItem("email");
+        localStorage.removeItem("password");
       }
     });
 
@@ -94,12 +93,12 @@ const AuthProvider = ({ children }) => {
     logOut,
     createUser,
     updateUserProfile,
-    loadingUserData,
     isAdmin,
     userData,
     setLoading,
     isVerifiedPartner,
     isPartner,
+    isSubAdmin,
   };
 
   return (

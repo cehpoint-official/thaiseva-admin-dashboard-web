@@ -11,22 +11,43 @@ import {
   Paper,
   Select,
   TextField,
-  Typography,
 } from "@mui/material";
 import { useContext, useState } from "react";
-import { isValidPhoneNumber } from "react-phone-number-input";
-import { collection, doc, setDoc, updateDoc } from "firebase/firestore";
-import { db, storage, usersCollection } from "../../firebase/firebase.config";
+import {
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
+import {
+  chatRoomsCollection,
+  chatsCollection,
+  db,
+  usersCollection,
+} from "../../firebase/firebase.config";
 import { AuthContext } from "../../contextAPIs/AuthProvider";
 import { useNavigate } from "react-router-dom";
 const partnersCollection = collection(db, "partners");
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { getFileUrl } from "../../utils/utils";
+import SubTitle from "../../components/SubTitle";
+import {
+  GoogleMap,
+  MarkerF,
+  StandaloneSearchBox,
+} from "@react-google-maps/api";
+
+const center = { lat: 48.8584, lng: 2.2945 };
 
 const PartnerOnboarding = () => {
   const { createUser, updateUserProfile } = useContext(AuthContext);
   const [serviceCategory, setServiceCategory] = useState("Others");
+  const [profileURL, setProfileURL] = useState("");
   const [vechicleNames, setVechicleNames] = useState([]);
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [map, setMap] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [searchBox, setSearchBox] = useState(null);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -58,17 +79,16 @@ const PartnerOnboarding = () => {
       address,
       serviceArea,
       educationalBackground,
-      numberOfVehicles,
+      numberPlate,
       bankName,
       accountNumber,
+      phoneNumber,
       bankAddress,
-      profile,
     } = data;
-
-    const valid = isValidPhoneNumber(`+66 ${phoneNumber}`);
-
     // validating patner's info
-    if (!valid) {
+    if (!profileURL) {
+      return setError("Provide a valid profile");
+    } else if (phoneNumber?.length < 7 || phoneNumber?.length > 11) {
       return setError("Invalid Number");
     }
     const accountInfo = { email, password };
@@ -78,11 +98,12 @@ const PartnerOnboarding = () => {
       email,
       phoneNumber,
       address,
+      photoURL: profileURL,
+      location,
     };
 
     const serviceInformation = {
       serviceArea,
-      servicesOffered: [],
     };
 
     const paymentInformation = { bankName, accountNumber, bankAddress };
@@ -97,7 +118,7 @@ const PartnerOnboarding = () => {
       serviceCategory === "Logistics and Transportation" ||
       serviceCategory === "Order Pick Up"
     ) {
-      serviceInformation.numberOfVehicles = numberOfVehicles;
+      serviceInformation.numberPlate = numberPlate;
       serviceInformation.vechicleNames = vechicleNames;
     }
 
@@ -117,10 +138,14 @@ const PartnerOnboarding = () => {
         const createdUser = res.user;
 
         if (createdUser) {
+          // adding partner's data to the partners collection
+          partnerInfo.uid = createdUser.uid;
+
           // adding users data to the useres collection
           await setDoc(doc(usersCollection, createdUser.uid), {
             email: email,
             displayName: fullName,
+            photoURL: profileURL,
             role: "Partner",
             status: "Pending",
             serviceCategory,
@@ -128,36 +153,47 @@ const PartnerOnboarding = () => {
           }).catch((error) => {
             console.log(error);
           });
-
           navigate("/dashboard");
+          await updateUserProfile(fullName, profileURL); //updating user name and photoURL
+          await setDoc(doc(partnersCollection, createdUser.uid), partnerInfo);
 
-          const storageRef = ref(storage, createdUser.uid); // firebase storage to store profile img
+          const hasRoom = await getDoc(
+            doc(chatRoomsCollection, "LocalPartnerSupport")
+          );
 
-          // Uploading the image to storage
-          const uploadTask = uploadBytesResumable(storageRef, profile[0]);
-          uploadTask.on(
-            (error) => {
-              console.log(error.message);
-            },
+          if (!hasRoom.exists()) {
+            // creating conversation for thaiseva admin
+            await setDoc(doc(chatRoomsCollection, "LocalPartnerSupport"), {
+              [createdUser.uid + "_LocalPartnerSupport"]: {
+                userInfo: {
+                  uid: createdUser?.uid,
+                  displayName: createdUser?.displayName,
+                  photoURL: createdUser?.photoURL,
+                  phoneNumber,
+                },
+                isRead: true,
+                date: serverTimestamp(),
+              },
+            });
+          } else {
+            // creating conversation for thaiseva admin
+            await updateDoc(doc(chatRoomsCollection, "LocalPartnerSupport"), {
+              [createdUser.uid + "_LocalPartnerSupport"]: {
+                userInfo: {
+                  uid: createdUser?.uid,
+                  displayName: createdUser?.displayName,
+                  photoURL: createdUser?.photoURL,
+                  phoneNumber,
+                },
+                isRead: true,
+                date: serverTimestamp(),
+              },
+            });
+          }
 
-            async () => {
-              // getting the img url after uploading to the storage
-              await getDownloadURL(uploadTask.snapshot.ref).then(
-                async (photoURL) => {
-                  await updateUserProfile(fullName, photoURL); //updating user name and photoURL
-                  await updateDoc(doc(usersCollection, createdUser.uid), {
-                    photoURL: photoURL,
-                  });
-                  // adding partner's data to the partners collection
-                  partnerInfo.uid = createdUser.uid;
-                  partnerInfo.personalInformation.photoURL = photoURL;
-                  await setDoc(
-                    doc(partnersCollection, createdUser.uid),
-                    partnerInfo
-                  ).catch(() => console.log(" error"));
-                }
-              );
-            }
+          await setDoc(
+            doc(chatsCollection, createdUser.uid + "_LocalPartnerSupport"),
+            { messages: [] }
           );
         }
       })
@@ -166,6 +202,53 @@ const PartnerOnboarding = () => {
   /* ===============================================================
                           Handle form submission end
   ===============================================================*/
+
+  /* ========================================================
+              Google maps functionalities Started
+ ======================================================== */
+  const onMapLoad = (map) => {
+    setMap(map);
+  };
+
+  const onMapClick = (e) => {
+    setLocation({
+      lat: e.latLng.lat(),
+      lng: e.latLng.lng(),
+    });
+  };
+
+  const onSearchLoad = (searchBox) => {
+    setSearchBox(searchBox);
+  };
+
+  const onPlacesChanged = () => {
+    const places = searchBox.getPlaces();
+
+    if (places.length === 0) return;
+
+    const location = places[0].geometry.location;
+
+    setLocation({
+      lat: location.lat(),
+      lng: location.lng(),
+    });
+    map.setCenter(location);
+  };
+  /* ========================================================
+            Google maps functionalities Ended
+======================================================== */
+
+  // uploading profile photo
+  const handleUploadProfile = async (e) => {
+    const { files } = e.target;
+    setError("");
+    const result = await getFileUrl(files);
+    if (result.error) {
+      setError(result.message);
+    } else {
+      setProfileURL(result.url);
+    }
+  };
 
   // setting selected vechicle into the select input
   const handleChangeVechicleNames = (event) => {
@@ -184,6 +267,27 @@ const PartnerOnboarding = () => {
     setVechicleNames([]);
   };
 
+  // custom text field for common data
+  const textField = (label, name, placeholder) => {
+    return (
+      <Grid item xs={12} sm={6} md={4}>
+        <TextField
+          label={label}
+          type={name === "phoneNumber" ? "number" : "text"}
+          placeholder={placeholder}
+          fullWidth
+          {...register(name, { required: true })}
+        />
+        {errors?.name && (
+          <span className="text-red-500">{label} is required</span>
+        )}
+        {error.includes("Number") && name === "phoneNumber" && (
+          <span className="text-red-500">{error}</span>
+        )}
+      </Grid>
+    );
+  };
+
   return (
     <div className="w-full h-full md:px-10 p-2 py-12 bg-[blue]">
       {/* form container */}
@@ -192,29 +296,15 @@ const PartnerOnboarding = () => {
         sx={{ p: { xs: 2, sm: 3, md: 4, lg: 5 }, mx: "auto" }}
       >
         <h3 className="text-center text-[blue] font-bold text-2xl">
-          Partner Onboarding Form
+          Local Partner Onboarding Form
         </h3>
 
         <Box component="form" onSubmit={handleSubmit(onSubmit)}>
           {/* Account Information*/}
-          <Typography variant="h6" sx={{ my: 1, fontWeight: "bold" }}>
-            Account & Contact Information :{" "}
-          </Typography>{" "}
+          <SubTitle text="Account & Contact Information :" />
           <Grid container spacing={3}>
             {/* Email */}
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Email"
-                type="email"
-                placeholder="example@gmail.com"
-                defaultValue=""
-                fullWidth
-                {...register("email", { required: true })}
-              />
-              {errors?.email && (
-                <span className="text-red-500">Email is required</span>
-              )}
-            </Grid>
+            {textField("Email", "email", "example@gmail.com")}
 
             {/* Password */}
             <Grid item xs={12} sm={6} md={4}>
@@ -269,71 +359,31 @@ const PartnerOnboarding = () => {
             </Grid>
 
             {/* Full Name */}
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Full Name"
-                type="text"
-                defaultValue=""
-                fullWidth
-                {...register("fullName", { required: true })}
-                className="capitalize"
-              />
-              {errors?.fullName && (
-                <span className="text-red-500">Full Name is required</span>
-              )}
-            </Grid>
+            {textField("Full Name", "fullName", "Your Full Name")}
 
             {/* Profile Picture */}
             <Grid item xs={12} sm={6} md={4}>
               <TextField
                 label="Select Profile Picture"
                 type="file"
-                defaultValue=""
-                placeholder=""
                 fullWidth
                 InputLabelProps={{ shrink: true }}
-                {...register("profile", { required: true })}
+                onChange={handleUploadProfile}
               />
-              {errors?.profile && (
-                <span className="text-red-500">
-                  Profile picture is required
-                </span>
+              {(error.includes("file") || error.includes("profile")) && (
+                <span className="text-red-500 text-sm">{error}</span>
               )}
             </Grid>
 
             {/* Phone */}
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Phone Number"
-                placeholder="12 345 6789"
-                type="tel"
-                fullWidth
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-              />
-              {error.includes("Number") && (
-                <span className="text-red-500">{error}</span>
-              )}
-            </Grid>
+            {textField("Phone Number", "phoneNumber", "12 345 6789")}
 
             {/* Address */}
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Address"
-                type="text"
-                placeholder="Type your current address."
-                fullWidth
-                {...register("address", { required: true })}
-              />
-              {errors?.address && (
-                <span className="text-red-500">Address is required</span>
-              )}
-            </Grid>
+            {textField("Address", "address", "Type your current address")}
           </Grid>
           {/* Service Information*/}
-          <Typography variant="h6" sx={{ my: 1, fontWeight: "bold" }}>
-            Service information that you will provide :
-          </Typography>
+          <SubTitle text="Service information that you will provide :" />
+
           <Grid container spacing={3}>
             {/* Service Category */}
             <Grid item xs={12} sm={6} md={4}>
@@ -357,47 +407,22 @@ const PartnerOnboarding = () => {
                   <MenuItem value="Order Local Sim">Order Local Sim</MenuItem>
                   <MenuItem value="Home Services">Home Services</MenuItem>
                   <MenuItem value="Order Pick Up">Order Pick Up</MenuItem>
-
                   <MenuItem value="Others">Others</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
 
             {/* Service Area */}
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Which location will you provide the service?"
-                type="tel"
-                placeholder="City Name, District Name"
-                // InputLabelProps={{ shrink: true }}
-                fullWidth
-                {...register("serviceArea", { required: true })}
-              />
-              {errors?.serviceArea && (
-                <span className="text-red-500">Service Area is required</span>
-              )}
-            </Grid>
+            {textField(
+              "Which location will you provide the service?",
+              "serviceArea",
+              "City Name, District Name"
+            )}
 
             {/* Number of Vehicles */}
             {(serviceCategory === "Logistics and Transportation" ||
-              serviceCategory === "Order Pick Up") && (
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  label="Number of Vehicles"
-                  type="number"
-                  fullWidth
-                  inputProps={{
-                    min: 0,
-                  }}
-                  {...register("numberOfVehicles", { required: true })}
-                />
-                {errors?.numberOfVehicles && (
-                  <span className="text-red-500">
-                    Number of Vehicles is required
-                  </span>
-                )}
-              </Grid>
-            )}
+              serviceCategory === "Order Pick Up") &&
+              textField("Number of Vehicles", "numberPlate", "Number Plate")}
 
             {/* Type of Vehicles */}
             {(serviceCategory === "Logistics and Transportation" ||
@@ -439,66 +464,53 @@ const PartnerOnboarding = () => {
 
             {/* Educational Background */}
             {(serviceCategory === "Legal Administrative" ||
-              serviceCategory === "Official Work") && (
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  label="Institution Name"
-                  type="text"
-                  placeholder="Where did you complete graduation?"
-                  fullWidth
-                  {...register("educationalBackground", { required: true })}
-                />
-                {errors?.educationalBackground && (
-                  <span className="text-red-500">
-                    Institution Name is required
-                  </span>
-                )}
-              </Grid>
-            )}
+              serviceCategory === "Official Work") &&
+              textField(
+                "Institution Name",
+                "educationalBackground",
+                "Where did you complete graduation?"
+              )}
           </Grid>
           {/* Payment Information*/}
-          <Typography variant="h6" sx={{ my: 1, fontWeight: "bold" }}>
-            Payment Information :{" "}
-          </Typography>
+          <SubTitle text="Payment Information :" />
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Bank Name"
-                type="text"
-                placeholder="You will get paid in this bank"
-                fullWidth
-                {...register("bankName", { required: true })}
-              />
-              {errors?.bankName && (
-                <span className="text-red-500">Bank Name is required</span>
-              )}
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Account Number"
-                type="text"
-                placeholder="Type the number carefully"
-                fullWidth
-                rows={6}
-                {...register("accountNumber", { required: true })}
-              />
-              {errors?.accountNumber && (
-                <span className="text-red-500">Account Number is required</span>
-              )}
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Bank Address"
-                type="text"
-                placeholder="Where is the branch located?"
-                fullWidth
-                {...register("bankAddress", { required: true })}
-              />
-              {errors?.bankAddress && (
-                <span className="text-red-500">Bank Address is required</span>
-              )}
-            </Grid>
+            {textField("Bank Name", "bankName", "Bank Name")}
+            {textField(
+              "Account Number",
+              "accountNumber",
+              "Type the number carefully"
+            )}
+            {textField(
+              "Bank Address",
+              "bankAddress",
+              "Where is the branch located?"
+            )}
           </Grid>
+
+          <div className="w-full h-[400px] my-4 relative">
+            <div className="absolute top-2 left-1/3 z-10 ">
+              <StandaloneSearchBox
+                onLoad={onSearchLoad}
+                onPlacesChanged={onPlacesChanged}
+              >
+                <input
+                  type="text"
+                  placeholder="Search for a location"
+                  className="location-input border border-blue-500"
+                />
+              </StandaloneSearchBox>
+            </div>
+            <GoogleMap
+              id="map"
+              center={center}
+              zoom={14}
+              onLoad={onMapLoad}
+              onClick={onMapClick}
+              mapContainerStyle={{ width: "100%", height: "100%" }}
+            >
+              {location && <MarkerF position={location} />}
+            </GoogleMap>
+          </div>
           <Box textAlign="center" sx={{ my: 2 }}>
             <Button type="submit" variant="contained" color="primary">
               Submit

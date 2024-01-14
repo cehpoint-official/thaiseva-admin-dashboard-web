@@ -16,7 +16,7 @@ const PartnerChatProvider = ({ children }) => {
       case "CHANGE_USER":
         return {
           oppositeUser: action.payload,
-          chatId: user?.uid + "_CustomerSupport",
+          chatId: user?.uid + action?.payload?.uid,
         };
 
       default:

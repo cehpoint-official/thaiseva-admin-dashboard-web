@@ -1,16 +1,7 @@
 import { useContext, useState } from "react";
 import { AuthContext } from "../../contextAPIs/AuthProvider";
-import {
-  Box,
-  Button,
-  Grid,
-  Modal,
-  Paper,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Grid, Modal, Paper, TextField } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import { closeSnackbar } from "notistack";
 
 const style = {
   position: "absolute",
@@ -34,9 +25,12 @@ const Login = () => {
     const form = e.target;
     const email = form.email.value;
     const password = form.password.value;
+
     logInUser(email, password)
       .then((res) => {
         const loggedUser = res.user;
+        localStorage.setItem("email", email);
+        localStorage.setItem("password", password);
         if (loggedUser) {
           navigate("/dashboard");
         }
@@ -48,7 +42,7 @@ const Login = () => {
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   return (
-    <div className="w-screen h-screen flex items-center justify-center md:px-10 p-2 py-12 bg-[blue]">
+    <div className="w-screen h-screen flex items-center justify-center md:px-10 p-2 py-12 bg-[var(--primary-bg)]">
       {/* form container */}
       <Paper
         elevation={3}
@@ -58,8 +52,9 @@ const Login = () => {
           height: "fit-content",
           width: { xs: "100%", sm: "50%", md: "40%" },
         }}
+        className="shadow-xl shadow-black"
       >
-        <h3 className="text-center text-[blue] font-bold text-2xl mb-3">
+        <h3 className="text-center text-[var(--primary-bg)] font-bold text-2xl mb-3">
           Login
         </h3>
         <Box component="form" onSubmit={handleLogin}>
@@ -88,7 +83,11 @@ const Login = () => {
           </Grid>
           {error && <span className="text-red-500">{error}</span>}
           <Box textAlign="center" sx={{ my: 2 }}>
-            <Button type="submit" variant="contained" color="primary">
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{ backgroundColor: "var(--primary-bg)" }}
+            >
               Login
             </Button>
           </Box>

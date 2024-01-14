@@ -4,7 +4,7 @@
 
 #### Admin emial : admin@gmail.com
 
-#### Admin password : Shakib100%
+#### Admin password : User100%
 
 #### User email : user1@gmail.com
 

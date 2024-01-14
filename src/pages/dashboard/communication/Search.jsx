@@ -18,7 +18,8 @@ const Search = ({ setOpenSidebar }) => {
   const [username, setUsername] = useState("");
   const [oppositeUser, setOppositeUser] = useState(null);
   const [error, setError] = useState(false);
-  const { dispatch } = useContext(AdminChatContext);
+  const { dispatch } = useContext(AdminChatContext) || {};
+  // const { chatRoom } = useContext(PartnerContext);
 
   const handleSearch = async () => {
     try {
@@ -38,7 +39,23 @@ const Search = ({ setOpenSidebar }) => {
   };
 
   const handleSelect = async () => {
-    const conversationId = oppositeUser.uid + "_ClientSupport";
+    let adminUid = "";
+    let chatRoom = "";
+    if (oppositeUser?.serviceCategory === "Driving") {
+      adminUid = "_DriversSupport";
+      chatRoom = "DriversSupport";
+    } else if (oppositeUser?.serviceCategory === "Hotel") {
+      adminUid = "_HotelSupport";
+      chatRoom = "HotelSupport";
+    } else if (oppositeUser?.serviceCategory === "Restaurant") {
+      adminUid = "_RestaurantSupport";
+      chatRoom = "RestaurantSupport";
+    } else {
+      adminUid = "_LocalPartnerSupport";
+      chatRoom = "LocalPartnerSupport";
+    }
+
+    const conversationId = oppositeUser.uid + adminUid;
 
     try {
       const res = await getDoc(doc(db, "chats", conversationId));
@@ -55,7 +72,7 @@ const Search = ({ setOpenSidebar }) => {
         });
 
         // creating conversation for thaiseva admin
-        await updateDoc(doc(db, "chatRooms", "CustomerSupport"), {
+        await updateDoc(doc(db, "chatRooms", chatRoom), {
           [conversationId + ".userInfo"]: {
             uid: oppositeUser.uid,
             displayName: oppositeUser.displayName,
@@ -65,15 +82,15 @@ const Search = ({ setOpenSidebar }) => {
         });
 
         // creating conversation for user
-        await updateDoc(doc(db, "chatRooms", oppositeUser.uid), {
-          [conversationId + ".userInfo"]: {
-            uid: "_ClientSupport",
-            displayName: "Admin Support",
-            photoURL:
-              "https://images.pexels.com/photos/3823488/pexels-photo-3823488.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", // todo : thaiseva logo
-          },
-          [conversationId + ".date"]: serverTimestamp(),
-        });
+        // await updateDoc(doc(db, "chatRooms", oppositeUser.uid), {
+        //   [conversationId + ".userInfo"]: {
+        //     uid: adminUid,
+        //     displayName: displayName,
+        //     photoURL:
+        //       "https://images.pexels.com/photos/3823488/pexels-photo-3823488.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", // todo : thaiseva logo
+        //   },
+        //   [conversationId + ".date"]: serverTimestamp(),
+        // });
       } else {
         dispatch({ type: "CHANGE_USER", payload: oppositeUser });
       }

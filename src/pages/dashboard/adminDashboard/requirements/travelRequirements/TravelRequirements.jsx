@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -20,11 +21,11 @@ import {
   TablePagination,
   TableRow,
   TextField,
+  Typography,
 } from "@mui/material";
 import { useContext } from "react";
 import { useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 import CloseIcon from "@mui/icons-material/Close";
 import { useEffect } from "react";
 import { RequirementContext } from "../../../../../contextAPIs/RequirementsProvider";
@@ -32,6 +33,8 @@ import { travelRequirementsCollection } from "../../../../../firebase/firebase.c
 import Loading from "../../../../../components/Loading";
 import PageHeading from "../../../../../components/PageHeading";
 import ViewDetailsIcon from "../../../../../components/ViewDetailsIcon";
+import { format } from "timeago.js";
+import { item } from "../../../../../utils/utils";
 
 const TravelRequirements = () => {
   const { travelRequirements, setRefetchRequirement } =
@@ -46,7 +49,6 @@ const TravelRequirements = () => {
   const [completedQuantity, setCompletedQuantity] = useState(0);
   const [pendingQuantity, setPendingQuantity] = useState(0);
   const [notYetQuantity, setNotYetQuantity] = useState(0);
-
   const [matchedRequirements, setMatchedRequirements] = useState([]);
 
   useEffect(() => {
@@ -87,7 +89,7 @@ const TravelRequirements = () => {
     }
 
     // Getting not yet task
-    if (queryStatus === "Not Yet") {
+    if (queryStatus === "Incomplete") {
       const notYetTasks = travelRequirements.filter(
         (item) => item.isCompleted === false
       );
@@ -108,6 +110,11 @@ const TravelRequirements = () => {
       width: 100,
     },
     {
+      id: "date",
+      label: "Task Assigned",
+      width: 100,
+    },
+    {
       id: "status",
       label: "Status",
       width: 100,
@@ -124,6 +131,7 @@ const TravelRequirements = () => {
     requirementTitle,
     providerPhone,
     locationName,
+    date,
     isChecked,
     isCompleted,
     id
@@ -132,13 +140,12 @@ const TravelRequirements = () => {
       requirementTitle,
       providerPhone,
       locationName,
+      date,
       isChecked,
       isCompleted,
       id,
     };
   }
-
-  console.log(matchedRequirements);
 
   // calling createData function with partner's data
   const rows = matchedRequirements.map((requirement) => {
@@ -146,6 +153,7 @@ const TravelRequirements = () => {
       requirement.requirementTitle,
       requirement.providerPhone,
       requirement.locationName,
+      requirement.date,
       requirement.isChecked,
       requirement.isCompleted,
       requirement.id
@@ -258,7 +266,9 @@ const TravelRequirements = () => {
       <div className="flex flex-wrap gap-1 justify-between md:pr-4 mb-1">
         <button
           className={`py-1 px-2 rounded text-sm ${
-            queryStatus === "Total" ? "bg-[blue] text-white" : "bg-gray-300"
+            queryStatus === "Total"
+              ? "bg-[var(--primary-bg)] text-white"
+              : "bg-gray-300"
           }`}
           onClick={() => setQueryStatus("Total")}
         >
@@ -266,7 +276,9 @@ const TravelRequirements = () => {
         </button>
         <button
           className={`py-1 px-2 rounded text-sm ${
-            queryStatus === "Completed" ? "bg-[blue] text-white" : "bg-gray-300"
+            queryStatus === "Completed"
+              ? "bg-[var(--primary-bg)] text-white"
+              : "bg-gray-300"
           }`}
           onClick={() => setQueryStatus("Completed")}
         >
@@ -274,7 +286,9 @@ const TravelRequirements = () => {
         </button>
         <button
           className={`py-1 px-2 rounded text-sm ${
-            queryStatus === "Pending" ? "bg-[blue] text-white" : "bg-gray-300"
+            queryStatus === "Pending"
+              ? "bg-[var(--primary-bg)] text-white"
+              : "bg-gray-300"
           }`}
           onClick={() => setQueryStatus("Pending")}
         >
@@ -282,11 +296,13 @@ const TravelRequirements = () => {
         </button>
         <button
           className={`py-1 px-2 rounded text-sm ${
-            queryStatus === "Not Yet" ? "bg-[blue] text-white" : "bg-gray-300"
+            queryStatus === "Incomplete"
+              ? "bg-[var(--primary-bg)] text-white"
+              : "bg-gray-300"
           }`}
-          onClick={() => setQueryStatus("Not Yet")}
+          onClick={() => setQueryStatus("Incomplete")}
         >
-          Not Yet : {notYetQuantity}
+          Incomplete : {notYetQuantity}
         </button>
       </div>
       <Paper sx={{ width: "100%", overflowX: "hidden" }}>
@@ -303,7 +319,7 @@ const TravelRequirements = () => {
                       align="center"
                       style={{
                         width: column.width,
-                        color: "blue",
+                        color: "var(--primary-bg)",
                         fontWeight: "bold",
                       }}
                     >
@@ -325,7 +341,7 @@ const TravelRequirements = () => {
                               row.isCompleted === false &&
                               row.isChecked === false
                             ) {
-                              value = "Not Yet";
+                              value = "Incomplete";
                             } else if (
                               row.isCompleted === true &&
                               row.isChecked === false
@@ -338,14 +354,19 @@ const TravelRequirements = () => {
                               value = "Completed";
                             }
                           }
+
+                          const date = new Date(
+                            row["date"]?.seconds * 1000 +
+                              row["date"]?.nanoseconds / 1000000
+                          );
                           return (
                             <TableCell key={column.id} align="center">
-                              {((value === "Not Yet" ||
+                              {((value === "Incomplete" ||
                                 value === "Pending" ||
                                 value === "Completed") && (
                                 <div
-                                  className={`block ${
-                                    (value === "Not Yet" &&
+                                  className={`block w-fit mx-auto ${
+                                    (value === "Incomplete" &&
                                       "bg-slate-400 text-black") ||
                                     (value === "Pending" && "bg-orange-500") ||
                                     (value === "Completed" && "bg-green-500")
@@ -354,6 +375,7 @@ const TravelRequirements = () => {
                                   {value}
                                 </div>
                               )) ||
+                                (column?.id === "date" && format(date)) ||
                                 (column.id === "action" && (
                                   <>
                                     <div
@@ -388,68 +410,106 @@ const TravelRequirements = () => {
       <Dialog
         open={viewDetailsModal}
         onClose={() => setViewDetailsModal(false)}
-        // sx={{ minWidth: 400 }}
+        aria-labelledby="responsive-dialog-title"
+        fullWidth
       >
-        <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
-          {requirement.requirementTitle}
-        </DialogTitle>
-        <IconButton
-          aria-label="close"
-          onClick={() => setViewDetailsModal(false)}
-          sx={{
-            position: "absolute",
-            right: 0,
-            top: 0,
-            color: "gray",
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-
-        {/* modal body */}
-        <DialogContent dividers sx={{ p: 2 }}>
-          <div>
-            <span>Task Details : </span>
-            <div className="border-2 border-blue-400 p-2 rounded">
-              <p>{requirement.requirementText}</p>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <FormControl>
-              <FormLabel className="mt-2">Verify the task</FormLabel>
-              <RadioGroup
-                name="controlled-radio-buttons-group"
-                defaultValue={requirement.isChecked}
-                onChange={(e) => setIsChecked(e.target.value)}
-              >
-                <FormControlLabel
-                  value={true}
-                  control={<Radio />}
-                  label="Checked"
-                />
-              </RadioGroup>
-            </FormControl>
-            <button
-              className="bg-[blue] text-white rounded py-1 px-2 text-xs w-fit mt-2"
-              onClick={() => handleChangeStatus(requirement.id)}
-              disabled={
-                requirement.isChecked || requirement.isCompleted === false
-              }
-            >
-              Save
-            </button>
-          </div>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            variant="contained"
-            autoFocus
-            sx={{ bgcolor: "blue", color: "white", hover: "none" }}
+        <Box>
+          <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
+            <Typography variant="div">
+              <span className="font-semibold ">Category : </span>{" "}
+              <span className="bg-[var(--primary-bg)] text-white font-bold py-1 px-2 rounded inline-block text-sm">
+                {requirement?.serviceCategory}
+              </span>
+            </Typography>
+          </DialogTitle>
+          <IconButton
+            aria-label="close"
             onClick={() => setViewDetailsModal(false)}
+            sx={{
+              position: "absolute",
+              right: 0,
+              top: 0,
+              color: "gray",
+            }}
           >
-            Close
-          </Button>
-        </DialogActions>
+            <CloseIcon />
+          </IconButton>
+
+          {/* modal body */}
+          <DialogContent dividers sx={{ p: { xs: 2, md: 2 } }}>
+            {/* personal information */}
+
+            <Grid container spacing={1} fullWidth>
+              {item("Task Name", requirement?.requirementTitle)}
+              {item("Service Name", requirement?.serviceName)}
+              {item("Provider", requirement?.providerName)}
+              {item("Provider Phone", requirement?.providerPhone)}
+              {item("Client Location", requirement?.locationName)}
+              {item("Clinet's Name", requirement?.clientName)}
+              {item("Client's Phone", requirement?.clientNumber)}
+              {item("Description", requirement?.requirementText, true)}
+            </Grid>
+
+            {requirement.isChecked ? (
+              <p className="bg-green-500 text-center py-1 rounded text-white my-3">
+                The task was completed
+              </p>
+            ) : (
+              <div className="">
+                {requirement.isCompleted && (
+                  <p className="bg-orange-500 text-center p-1 rounded text-white my-3 text-sm">
+                    The service provider has completed this task. Confirm the
+                    task after asking the client.
+                  </p>
+                )}
+                <div className="flex flex-col">
+                  <FormControl>
+                    {requirement.isCompleted && (
+                      <>
+                        <FormLabel className="mt-2">Verify the task</FormLabel>
+                        <RadioGroup
+                          name="controlled-radio-buttons-group"
+                          defaultValue={requirement.isChecked}
+                          onChange={(e) => setIsChecked(e.target.value)}
+                        >
+                          <FormControlLabel
+                            value={true}
+                            control={<Radio />}
+                            label="Checked"
+                          />
+                        </RadioGroup>
+                      </>
+                    )}
+                  </FormControl>
+                  <button
+                    className="bg-[var(--primary-bg)] text-white rounded py-1 px-2 text-xs w-fit mt-2"
+                    onClick={() => handleChangeStatus(requirement.id)}
+                    disabled={
+                      requirement.isChecked || requirement.isCompleted === false
+                    }
+                  >
+                    {requirement.isCompleted ? "Confirm" : "Not Completed"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              type="submit"
+              autoFocus
+              sx={{
+                bgcolor: "var(--primary-bg)",
+                color: "white",
+                hover: "none",
+              }}
+              onClick={() => setViewDetailsModal(false)}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
     </div>
   );

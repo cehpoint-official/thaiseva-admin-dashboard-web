@@ -1,12 +1,14 @@
-// import { useContext } from "react";
+import { useContext } from "react";
 import { createContext } from "react";
 // import { AuthContext } from "./AuthProvider";
 import { useReducer } from "react";
+import { PartnerContext } from "./PartnerProvider";
 
 export const AdminChatContext = createContext();
 
 const AdminChatProvider = ({ children }) => {
-  // const { user, isAdmin } = useContext(AuthContext);
+  const { chatRoom } = useContext(PartnerContext);
+
   const INITIAL_STATE = {
     chatId: "null",
     oppositeUser: {},
@@ -17,7 +19,7 @@ const AdminChatProvider = ({ children }) => {
       case "CHANGE_USER":
         return {
           oppositeUser: action.payload,
-          chatId: action.payload.uid + "_CustomerSupport",
+          chatId: action.payload.uid + `_${chatRoom}`,
         };
 
       default:

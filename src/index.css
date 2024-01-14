@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary-bg: #122159;
+  --secondary-bg: rgba(140, 140, 140, 0.422);
+  /* --secondary-bg: rgba(191, 216, 32, 0.874); */
+}
+
 .triangle {
   clip-path: polygon(35% 52%, 100% 100%, 100% 0);
 }
@@ -18,6 +24,17 @@
   @apply rounded-l-lg rounded-br-lg bg-blue-500 text-white;
 }
 
+.message-file:hover .delete-msg-btn {
+  @apply opacity-100;
+}
+.message:hover .delete-msg-btn {
+  @apply opacity-100;
+}
+
+.delete-msg-btn {
+  @apply absolute top-1/3 -left-6 opacity-0 duration-300 text-gray-600 cursor-pointer z-10;
+}
+
 .opposite-text {
   @apply bg-white rounded-r-lg rounded-bl-lg;
 }
@@ -31,7 +48,8 @@
 
 /* Style the vertical scrollbar thumb */
 ::-webkit-scrollbar-thumb {
-  background-color: rgb(37, 20, 172);
+  /* background-color: rgb(37, 20, 172); */
+  background-color: gray;
   border-radius: 5px;
   box-shadow: 0 0 2px rgba(30, 11, 153, 0.2);
 }
@@ -48,12 +66,32 @@
 
 /* Style the horizontal scrollbar thumb */
 ::-webkit-scrollbar-thumb:horizontal {
-  background-color: rgb(3, 3, 191);
+  background-color: gray;
   border-radius: 5px;
   box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
 }
 
-/* For non-webkit browsers (Firefox) */
-/* Style the scrollbar */
-/* scrollbar-width: thin;
-scrollbar-color: rgb(10, 10, 216) rgb(220, 220, 220); */
+/* btn styles */
+.input-add-btn {
+  @apply bg-[var(--primary-bg)] text-white h-fit w-fit cursor-pointer px-2 py-4 rounded-md flex items-center justify-center;
+}
+
+.cross-btn {
+  @apply bg-red-400 hover:bg-red-500 cursor-pointer text-white p-1 absolute top-0 right-0 h-5 w-5 rounded-full flex items-center justify-center;
+}
+
+.location-input {
+  @apply py-1 px-2 rounded text-slate-600 outline-none text-sm;
+}
+
+.location-btn {
+  @apply bg-[var(--primary-bg)] text-white  w-fit cursor-pointer px-2  rounded-md flex items-center justify-center;
+}
+
+.add-new-btn {
+  @apply py-1 px-2 rounded bg-[var(--primary-bg)] text-white;
+}
+
+.banner-section-title {
+  @apply md:text-xl text-lg font-semibold text-[var(--primary-bg)];
+}

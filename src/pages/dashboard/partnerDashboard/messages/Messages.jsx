@@ -1,6 +1,6 @@
 import { doc, onSnapshot } from "firebase/firestore";
 import { useContext, useEffect, useState } from "react";
-import { db } from "../../../../firebase/firebase.config";
+import { chatsCollection } from "../../../../firebase/firebase.config";
 import Message from "./Message";
 import { PartnerChatContext } from "../../../../contextAPIs/PartnerChatProvider";
 import { useRef } from "react";
@@ -11,7 +11,7 @@ const Messages = () => {
   const ref = useRef();
 
   useEffect(() => {
-    const unSub = onSnapshot(doc(db, "chats", data.chatId), (doc) => {
+    const unSub = onSnapshot(doc(chatsCollection, data.chatId), (doc) => {
       doc.exists() && setMessages(doc.data().messages);
     });
 
@@ -27,7 +27,7 @@ const Messages = () => {
   return (
     <div
       ref={ref}
-      className="bg-[#ddddf7] p-3 h-[calc(100%-112px)] overflow-y-scroll scroll-smooth"
+      className="bg-[#ddddf7] p-3 h-[calc(100%-112px)] overflow-y-scroll scroll-smooth  flex flex-col gap-1"
     >
       {messages && messages?.map((m) => <Message message={m} key={m.id} />)}
     </div>

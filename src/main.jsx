@@ -21,6 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               <SnackbarProvider maxSnack={3}>
                 <LoadScript
                   googleMapsApiKey={import.meta.env.VITE_Google_Api_Key}
+                  libraries={["places"]}
                 >
                   <RouterProvider router={router} />
                 </LoadScript>

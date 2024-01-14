@@ -1,6 +1,5 @@
-import AttachFileIcon from "@mui/icons-material/AttachFile";
 import InsertPhotoIcon from "@mui/icons-material/InsertPhoto";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { useState } from "react";
 import { v4 as uuid } from "uuid";
 import {
@@ -12,56 +11,107 @@ import {
 } from "firebase/firestore";
 
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { AuthContext } from "../../../contextAPIs/AuthProvider";
 import { AdminChatContext } from "../../../contextAPIs/AdminChatProvider";
-import { db, storage } from "../../../firebase/firebase.config";
+import {
+  chatRoomsCollection,
+  chatsCollection,
+  storage,
+} from "../../../firebase/firebase.config";
+import { PartnerContext } from "../../../contextAPIs/PartnerProvider";
 
-const Input = () => {
+const Input = ({ lastMessage, audioUrl, setAudioUrl }) => {
   const [text, setText] = useState("");
-  const [img, setImg] = useState(null);
-
-  const { user, isAdmin } = useContext(AuthContext);
+  const [loading, setLoading] = useState(false);
+  const { chatRoom } = useContext(PartnerContext);
   const { data } = useContext(AdminChatContext);
 
-  const handleSend = async () => {
-    if (img) {
-      const storageRef = ref(storage, uuid());
-      const uploadTask = await uploadBytesResumable(storageRef, img);
+  useEffect(() => {
+    const sendAudio = async () => {
+      const audioMessage = {
+        id: uuid(),
+        audioUrl,
+        text: "",
+        senderId: "_CustomerSupport",
+        date: Timestamp.now(),
+      };
 
-      const imgURL = await getDownloadURL(uploadTask.ref);
+      if (lastMessage?.serviceType) {
+        audioMessage.serviceType = lastMessage?.serviceType;
+      }
 
-      if (imgURL) {
-        await updateDoc(doc(db, "chats", data.chatId), {
-          messages: arrayUnion({
-            id: uuid(),
-            text,
-            senderId: "_CustomerSupport",
-            date: Timestamp.now(),
-            img: imgURL,
-          }),
+      await updateDoc(doc(chatsCollection, data.chatId), {
+        messages: arrayUnion(audioMessage),
+      });
+      setAudioUrl("");
+    };
+
+    audioUrl && sendAudio();
+  }, [audioUrl]);
+
+  useEffect(() => {
+    const updateIsRead = async () => {
+      // console.log(!data.chatId.startsWith("undefined"));
+      if (data.chatId.length > 40) {
+        await updateDoc(doc(chatRoomsCollection, chatRoom), {
+          [data.chatId + ".isRead"]: true,
         });
       }
-    } else if (text.length > 0) {
-      await updateDoc(doc(db, "chats", data.chatId), {
-        messages: arrayUnion({
-          id: uuid(),
-          text,
-          senderId: "_CustomerSupport",
-          date: Timestamp.now(),
-        }),
+    };
+
+    data.chatId.length > 40 && updateIsRead();
+  }, [data, chatRoom, lastMessage]);
+
+  const handleSend = async () => {
+    const newMessage = {
+      id: uuid(),
+      text,
+      senderId: "_CustomerSupport",
+      date: Timestamp.now(),
+      imageUrl: "",
+    };
+
+    if (lastMessage?.serviceType) {
+      newMessage.serviceType = lastMessage?.serviceType;
+    }
+
+    if (text.length > 0) {
+      await updateDoc(doc(chatsCollection, data.chatId), {
+        messages: arrayUnion(newMessage),
       });
     }
 
     // adding the last message to the thaiseva admin conversation
-    await updateDoc(doc(db, "chatRooms", "CustomerSupport"), {
+    await updateDoc(doc(chatRoomsCollection, chatRoom), {
       [data.chatId + ".lastMessage"]: {
         text,
       },
+      [data.chatId + ".audioUrl"]: false,
+      [data.chatId + ".imgUrl"]: false,
       [data.chatId + ".date"]: serverTimestamp(),
     });
 
     setText("");
-    setImg(null);
+  };
+
+  const handleSendImage = async (img) => {
+    if (img) {
+      setLoading(true);
+      const storageRef = ref(storage, uuid());
+      const uploadTask = await uploadBytesResumable(storageRef, img);
+
+      const imgURL = await getDownloadURL(uploadTask.ref);
+      if (imgURL) {
+        await updateDoc(doc(chatsCollection, data.chatId), {
+          messages: arrayUnion({
+            id: uuid(),
+            text: "",
+            senderId: "_CustomerSupport",
+            date: Timestamp.now(),
+            imageUrl: imgURL,
+          }),
+        }).then(() => setLoading(false));
+      }
+    }
   };
 
   return (
@@ -74,13 +124,17 @@ const Input = () => {
         value={text}
       />
       <div className="flex gap-2 items-center">
-        <AttachFileIcon />
+        {loading && (
+          <span className="text-orange-500 text-xs block">
+            Sending image...
+          </span>
+        )}
         <input
           type="file"
           name=""
           id="img"
           className="hidden"
-          onChange={(e) => setImg(e.target.files[0])}
+          onChange={(e) => handleSendImage(e.target.files[0])}
         />
         <label htmlFor="img">
           <InsertPhotoIcon />

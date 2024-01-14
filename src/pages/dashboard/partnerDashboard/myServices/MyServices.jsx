@@ -18,46 +18,51 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
 } from "@mui/material";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/Close";
 import { useForm } from "react-hook-form";
 import { AuthContext } from "../../../../contextAPIs/AuthProvider";
 import {
-  arrayUnion,
   deleteDoc,
   doc,
   getDoc,
   getDocs,
   query,
   setDoc,
-  updateDoc,
   where,
 } from "firebase/firestore";
-import {
-  localServicesCollection,
-  partnersCollection,
-} from "../../../../firebase/firebase.config";
+import { localServicesCollection } from "../../../../firebase/firebase.config";
 import { v4 as uuid } from "uuid";
 import { PartnerContext } from "../../../../contextAPIs/PartnerProvider";
 import PageHeading from "../../../../components/PageHeading";
-import { successNotification } from "../../../../components/Notifications";
-// import { SuccessNotification } from "../../../../components/Notifications";
+import {
+  askingForDelete,
+  deleteNotification,
+  successNotification,
+} from "../../../../utils/utils";
+import DeleteButton from "../../../../components/DeleteButton";
+import UpdateButton from "../../../../components/UpdateButton";
+import ServiceCategoryBtn from "../../../../components/ServiceCategoryBtn";
 
 const MyServices = () => {
   const [services, setServices] = useState([]);
   const [addServiceModal, setAddServiceModal] = useState(false); //Add service modal
-  const [updateServiceModal, setUpdateServiceModal] = useState(false); //Update service modal
   const [refetchServices, setRefetchServices] = useState(false);
   const { userData, loadingUserData, user } = useContext(AuthContext);
   const { partnerDetails } = useContext(PartnerContext);
-  const [service, setService] = useState({});
+  const [error, setError] = useState(" ");
+  const [serviceDetails, setServiceDetails] = useState({
+    id: "",
+    serviceName: "",
+    description: "",
+    serviceCategory: "",
+    serviceArea: "",
+    phoneNumber: "",
+  });
 
   const {
     handleSubmit,
-    // reset,
+    reset,
     register,
     formState: { errors },
   } = useForm();
@@ -78,48 +83,6 @@ const MyServices = () => {
     };
     user && !loadingUserData && loadData(user, localServicesCollection);
   }, [user, loadingUserData, refetchServices]);
-
-  const handleAddService = async (data) => {
-    const {
-      serviceName,
-      serviceArea,
-      vehicleNumber,
-      vehicleType,
-      phoneNumber,
-    } = data;
-
-    const id = uuid();
-
-    let service = {
-      serviceName,
-      serviceArea,
-      serviceCategory: partnerDetails.serviceCategory,
-      serviceProvider: partnerDetails.personalInformation.fullName,
-      providerUid: user.uid,
-      phoneNumber,
-      id,
-    };
-
-    if (userData.serviceCategory === "Logistics and Transportation") {
-      service.vehicleNumber = vehicleNumber;
-      service.vehicleType = vehicleType;
-    }
-
-    await setDoc(doc(localServicesCollection, id), service).then(() =>
-      setRefetchServices((p) => !p)
-    );
-
-    setAddServiceModal(false); // closing the add service modal after adding the modal
-
-    // adding the srvice to partner's data
-    await updateDoc(doc(partnersCollection, user.uid), {
-      "serviceInformation.servicesOffered": arrayUnion({
-        id,
-      }),
-    }).then(() =>
-      successNotification("The task is added successfully.", "success")
-    );
-  };
 
   // Partners table header
   let columns = [
@@ -164,39 +127,95 @@ const MyServices = () => {
     );
   });
 
+  const handleOpenAddServiceModal = () => {
+    reset();
+    setServiceDetails({
+      serviceName: "",
+      serviceCategory: "",
+      serviceArea: "",
+      phoneNumber: "",
+    });
+    setAddServiceModal(true);
+  };
+
+  const handleCloseAddServiceModal = () => {
+    setAddServiceModal(false);
+  };
+
+  // adding new service
+  const handleAddService = async (data) => {
+    setError("");
+    const {
+      serviceName,
+      serviceArea,
+      description,
+      vehicleNumber,
+      vehicleType,
+      phoneNumber,
+    } = data;
+
+    if (phoneNumber?.length > 11 || phoneNumber?.length < 8) {
+      return setError("Invalid phone number");
+    }
+
+    let id = "";
+    if (serviceDetails?.id) {
+      id = serviceDetails?.id;
+    } else {
+      id = uuid();
+    }
+
+    let service = {
+      serviceName,
+      serviceArea,
+      description,
+      serviceCategory: partnerDetails.serviceCategory,
+      serviceProvider: partnerDetails.personalInformation.fullName,
+      providerUid: user.uid,
+      phoneNumber,
+      id,
+    };
+
+    if (userData.serviceCategory === "Logistics and Transportation") {
+      service.vehicleNumber = vehicleNumber;
+      service.vehicleType = vehicleType;
+    }
+
+    await setDoc(doc(localServicesCollection, id), service).then(() => {
+      successNotification(
+        `The service is ${
+          serviceDetails?.serviceName ? "updated" : "added"
+        } successfully`
+      );
+      setRefetchServices((p) => !p);
+      setAddServiceModal(false);
+    });
+  };
+
   // deleting service
   const handleDelete = async (id) => {
-    await deleteDoc(doc(localServicesCollection, id)).then(() => {
-      successNotification("The task is deleted successfully.", "success");
-      setRefetchServices((p) => !p);
+    askingForDelete().then(async (result) => {
+      if (result.isConfirmed) {
+        await deleteDoc(doc(localServicesCollection, id)).then(() => {
+          setRefetchServices((p) => !p);
+          deleteNotification("The service is deleted successfully.");
+        });
+      }
     });
   };
 
   const handleUpdateServiceModal = async (id) => {
-    const res = await getDoc(doc(localServicesCollection, id));
-    if (res.exists()) {
-      const singleService = res.data();
-      setService(singleService);
-
-      setUpdateServiceModal(true);
-    }
-  };
-
-  const handleUpdateService = async (e) => {
-    e.preventDefault();
-    const serviceName = e.target.serviceName.value;
-    const serviceArea = e.target.serviceArea.value;
-    console.log(serviceName, serviceArea);
-
-    await updateDoc(doc(localServicesCollection, service.id), {
-      serviceName,
-      serviceArea,
-    }).then(() => {
-      setUpdateServiceModal(false);
-      setRefetchServices((p) => !p);
-      setService({});
-      successNotification("The task is updated successfully.", "success");
+    reset();
+    setServiceDetails({
+      serviceName: "",
+      serviceCategory: "",
+      serviceArea: "",
+      phoneNumber: "",
     });
+    const res = await getDoc(doc(localServicesCollection, id));
+    const singleService = res.data();
+    setServiceDetails(singleService);
+    setAddServiceModal(true);
   };
 
   const loadingContent = (
@@ -205,16 +224,35 @@ const MyServices = () => {
     </div>
   );
 
+  // custom text field for common data
+  const textField = (label, name, placeholder, defaultValue) => {
+    return (
+      <Grid item xs={12} sm={name === "description" ? 12 : 6}>
+        <TextField
+          label={label}
+          type={name === "phoneNumber" ? "number" : "text"}
+          placeholder={placeholder}
+          defaultValue={defaultValue && defaultValue}
+          multiline={name === "description"}
+          fullWidth
+          {...register(name, { required: true })}
+          rows={name === "description" ? 3 : ""}
+        />
+        {errors?.name && (
+          <span className="text-red-500">{label} is required</span>
+        )}
+      </Grid>
+    );
+  };
+
   return (
     <div>
       <PageHeading text={"My services"} />
 
       <div className="flex items-center justify-between  md:pr-3 mb-2">
-        <p className="my-2 font-bold">{services.length} services available</p>{" "}
+        <p className="my-2 font-bold">{services?.length} services available</p>{" "}
         <button
-          onClick={() => {
-            setAddServiceModal(true), setService({});
-          }}
+          onClick={handleOpenAddServiceModal}
           className="py-1 px-2 rounded bg-[blue] text-white"
         >
           Add Service
@@ -252,21 +290,17 @@ const MyServices = () => {
                         return (
                           <TableCell key={column.id} align="center">
                             {(column.id === "action" && (
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={() => handleDelete(row.id)}
-                                  className="bg-red-500 text-white p-1 rounded"
-                                >
-                                  <DeleteForeverIcon />
-                                </button>
-                                <button
+                              <div className="flex items-center justify-center gap-1">
+                                <div onClick={() => handleDelete(row.id)}>
+                                  <DeleteButton title="Delete the service" />
+                                </div>
+                                <div
                                   onClick={() =>
                                     handleUpdateServiceModal(row.id)
                                   }
-                                  className="bg-orange-500 text-white p-1 rounded ml-1"
                                 >
-                                  <EditIcon />
-                                </button>
+                                  <UpdateButton title="Update the service" />
+                                </div>
                               </div>
                             )) ||
                               value}
@@ -281,19 +315,22 @@ const MyServices = () => {
           )}
         </TableContainer>
       </Paper>
+
       {/* Add service modal */}
       <Dialog
         open={addServiceModal}
-        onClose={() => setAddServiceModal(false)}
+        onClose={handleCloseAddServiceModal}
         aria-labelledby="responsive-dialog-title"
       >
         <Box component="form" onSubmit={handleSubmit(handleAddService)}>
           <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
-            Add New Service
+            {serviceDetails?.serviceName
+              ? "Update the service"
+              : "Add New Service"}
           </DialogTitle>
           <IconButton
             aria-label="close"
-            onClick={() => setAddServiceModal(false)}
+            onClick={handleCloseAddServiceModal}
             sx={{
               position: "absolute",
               right: 0,
@@ -306,77 +343,63 @@ const MyServices = () => {
 
           {/* modal body */}
           <DialogContent dividers sx={{ p: { xs: 2, md: 2 } }}>
-            <Typography variant="div">
-              <span className="font-bold">Category : </span>{" "}
-              <span className="bg-[blue] text-white font-bold py-1 px-2 rounded inline-block">
-                {partnerDetails.serviceCategory}
-              </span>
-            </Typography>
+            <ServiceCategoryBtn value={partnerDetails?.serviceCategory} />
 
             <Grid container spacing={2} sx={{ mb: 2, mt: 0.5 }}>
-              {/* Full Name */}
-              <Grid item xs={12} sm={6} md={6}>
-                <TextField
-                  label="Service Name"
-                  type="text"
-                  defaultValue=""
-                  fullWidth
-                  {...register("serviceName", { required: true })}
-                />
-              </Grid>
+              {/* Service Name */}
+              {textField(
+                "Service Name",
+                "serviceName",
+                "",
+                serviceDetails?.serviceName
+              )}
 
               {/* Service Area */}
-              <Grid item xs={12} sm={6} md={6}>
-                <TextField
-                  label="Service Area"
-                  type="text"
-                  placeholder="Which location will you provide the service?"
-                  defaultValue=""
-                  fullWidth
-                  {...register("serviceArea", { required: true })}
-                />
-              </Grid>
+              {textField(
+                "Service Area",
+                "serviceArea",
+                "Your Available Range",
+                serviceDetails?.serviceArea
+              )}
 
               {/* Phone Number */}
-              <Grid item xs={12} sm={6} md={6}>
-                <TextField
-                  label="Phone Number"
-                  type="tel"
-                  defaultValue=""
-                  fullWidth
-                  {...register("phoneNumber", { required: true })}
-                />
-              </Grid>
+              {textField(
+                "Phone Number",
+                "phoneNumber",
+                "Provide an active number",
+                serviceDetails?.phoneNumber
+              )}
+
+              {/* Description */}
+              {textField(
+                "Description",
+                "description",
+                "Type the task description here...",
+                serviceDetails?.description
+              )}
 
               {/* Vehicle Registration Number */}
               {partnerDetails.serviceCategory ===
                 "Logistics and Transportation" && (
                 <>
-                  <Grid item xs={12} sm={6} md={6}>
-                    <TextField
-                      label="Vehicle Registration Number"
-                      type="text"
-                      placeholder="Number plate"
-                      defaultValue=""
-                      fullWidth
-                      {...register("vehicleNumber", { required: true })}
-                    />
-                  </Grid>
+                  {textField(
+                    "Vehicle Registration Number",
+                    "vehicleNumber",
+                    "Number plate",
+                    serviceDetails?.serviceArea
+                  )}
 
                   {/* Vehicle Type */}
-                  <Grid item xs={12} sm={6} md={6}>
-                    <TextField
-                      label="Vehicle Type"
-                      type="text"
-                      placeholder="Truck or Ven"
-                      defaultValue=""
-                      fullWidth
-                      {...register("vehicleType", { required: true })}
-                    />
-                  </Grid>
+                  {textField(
+                    "Vehicle Type",
+                    "vehicleType",
+                    "Truck or Ven",
+                    serviceDetails?.serviceArea
+                  )}
                 </>
               )}
             </Grid>
+            {error && <p className="text-red-500 text-center">{error}</p>}
           </DialogContent>
           <DialogActions>
             <Button
@@ -385,74 +408,7 @@ const MyServices = () => {
               autoFocus
               sx={{ bgcolor: "blue", color: "white", hover: "none" }}
             >
-              Add
-            </Button>
-          </DialogActions>
-        </Box>
-      </Dialog>
-
-      {/* Update service modal */}
-      <Dialog
-        open={updateServiceModal}
-        onClose={() => setUpdateServiceModal(false)}
-        aria-labelledby="responsive-dialog-title"
-      >
-        <Box component="form" onSubmit={handleUpdateService}>
-          <DialogTitle sx={{ m: 0, p: 2 }} id="customized-dialog-title">
-            Update the service
-          </DialogTitle>
-          <IconButton
-            aria-label="close"
-            onClick={() => setUpdateServiceModal(false)}
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: 0,
-              color: "gray",
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-
-          {/* modal body */}
-          <DialogContent dividers sx={{ p: { xs: 2, md: 2 } }}>
-            {
-              <Grid container spacing={0.5} sx={{ mb: 2, mt: 0.5 }}>
-                {/* Full Name */}
-                <Grid item xs={12} sm={6} md={6}>
-                  <TextField
-                    label="Service Name"
-                    type="text"
-                    defaultValue={service.serviceName}
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                    {...register("serviceName", { required: true })}
-                  />
-                </Grid>
-
-                {/* Service Area */}
-                <Grid item xs={12} sm={6} md={6}>
-                  <TextField
-                    label="Service Area"
-                    type="text"
-                    defaultValue={service.serviceArea}
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                    {...register("serviceArea", { required: true })}
-                  />
-                </Grid>
-              </Grid>
-            }
-          </DialogContent>
-          <DialogActions>
-            <Button
-              variant="contained"
-              type="submit"
-              autoFocus
-              sx={{ bgcolor: "blue", color: "white", hover: "none" }}
-              // onClick={handleUpdateService}
-            >
-              Update
+              {serviceDetails?.serviceName ? "Update" : "Add"}
             </Button>
           </DialogActions>
         </Box>

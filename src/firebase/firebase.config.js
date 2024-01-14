@@ -28,6 +28,24 @@ const localServicesCollection = collection(db, "localServices");
 const restaurentsCollection = collection(db, "restaurants");
 const hotelsCollection = collection(db, "hotels");
 const travelRequirementsCollection = collection(db, "travelRequirements");
+const travelServicesCollection = collection(db, "sightseeingPackages");
+const travelServicesDetailsCollection = collection(
+  db,
+  "sightseeingPackagesDetails"
+);
+const hotelPackages = collection(db, "hotelPackages");
+const hotelPackageDetails = collection(db, "hotelPackageDetails");
+const roomBookingCollection = collection(db, "hotelBookingData");
+const foodMenuCollection = collection(db, "foodMenu");
+const travelBookingCollection = collection(db, "travelBookingDetails");
+const settingsCollection = collection(db, "settings");
+const chatRoomsCollection = collection(db, "chatRooms");
+const chatsCollection = collection(db, "chats");
+const hotelStatisticsCollection = collection(db, "hotel_statistics");
+const statisticsCollection = collection(db, "statistics");
+const carDetailsCollection = collection(db, "carDetails");
+const carBookingsCollection = collection(db, "travelBookingDetails");
+const invoicesCollection = collection(db, "partner_invoices");
 
 // Use the 'firebase' instance created above to call functions
 const deleteUserFromAuth = httpsCallable(
@@ -49,5 +67,20 @@ export {
   restaurentsCollection,
   hotelsCollection,
   travelRequirementsCollection,
+  travelServicesCollection,
+  travelServicesDetailsCollection,
+  hotelStatisticsCollection,
+  travelBookingCollection,
+  hotelPackages,
+  roomBookingCollection,
+  hotelPackageDetails,
+  foodMenuCollection,
+  settingsCollection,
+  chatRoomsCollection,
+  chatsCollection,
+  statisticsCollection,
+  carDetailsCollection,
+  carBookingsCollection,
+  invoicesCollection,
   storage,
 };
