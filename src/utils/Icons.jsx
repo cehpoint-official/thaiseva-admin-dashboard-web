@@ -27,6 +27,8 @@ import ForumIcon from "@mui/icons-material/Forum";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import MenuIcon from "@mui/icons-material/Menu";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+
 export {
   HomeIcon,
   ReceiptIcon,
@@ -57,4 +59,5 @@ export {
   AdminPanelSettingsIcon,
   MenuIcon,
   SupportAgentIcon,
+  AccountBalanceWalletIcon,
 };

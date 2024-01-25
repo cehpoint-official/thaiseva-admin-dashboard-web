@@ -1,11 +1,17 @@
+import { addDays } from "date-fns";
 import { useContext, useEffect, useState } from "react";
-import { StatisticsContext } from "../../../../../contextAPIs/StatisticsProvider";
-import { amountCalculator, dateCalculator } from "../../../../../utils/utils";
+import { DateRange } from "react-date-range";
 import "react-date-range/dist/styles.css"; // main style file
 import "react-date-range/dist/theme/default.css"; // theme css file
-import { DateRange } from "react-date-range";
-import { addDays } from "date-fns";
-import LineChart from "../../../../../components/LineChart";
+import LineAndBarChart from "../../../../../components/LineAndBarChart";
+import { StatisticsContext } from "../../../../../contextAPIs/StatisticsProvider";
+import {
+  AccountBalanceWalletIcon,
+  ApartmentIcon,
+  DirectionsCarIcon,
+  HandshakeIcon,
+} from "../../../../../utils/Icons";
+import { amountCalculator, dateCalculator } from "../../../../../utils/utils";
 
 const AllStatistics = () => {
   const {
@@ -163,7 +169,7 @@ const AllStatistics = () => {
       </div>
       <div className="flex md:flex-row flex-col">
         <div className="md:w-[60vw] w-screen min-h-[50vh]">
-          <LineChart
+          <LineAndBarChart
             title="All Statistics"
             all={filteredAll}
             hotelStatistics={filteredHotel}
@@ -172,23 +178,45 @@ const AllStatistics = () => {
             chartType={chartType}
           />
         </div>
-        <div className="flex-grow p-2">
-          <h3 className="text-xl font-bold text-center border-b-2 mb-2 ">
-            Revenue
-          </h3>
-          <h3 className="text-xl font-bold flex items-center justify-between w-full">
-            <span>Hotel :</span> <span>฿{hotelTotal}</span>
-          </h3>
-          <h3 className="text-xl font-bold flex items-center justify-between w-full">
-            <span>Local :</span> <span>฿{localTotal}</span>
-          </h3>
-          <h3 className="text-xl font-bold flex items-center justify-between w-full">
-            <span>Travel : </span>
-            <span>฿{travelTotal}</span>
-          </h3>
-          <h3 className="text-xl font-bold flex items-center justify-between w-full border-t">
-            <span>Total :</span> <span>฿{allTotal}</span>
-          </h3>
+        <div className="flex-grow p-2 flex flex-col items-center justify-center gap-3">
+          <div className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white p-2 rounded flex flex-row items-center justify-start w-52">
+            <ApartmentIcon sx={{ height: 50, width: 50 }} />
+            <div>
+              <h3 className="text-lg -mb-2">Hotel</h3>
+              <span className="text-2xl font-bold">฿{hotelTotal}</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-600 to-cyan-500 text-white p-2 rounded flex flex-row items-center justify-start w-52">
+            <HandshakeIcon sx={{ height: 50, width: 50 }} />
+
+            <div>
+              <h3 className="text-lg -mb-2">
+                <span>Local Services</span>
+              </h3>
+              <span className="text-2xl font-bold">฿{localTotal}</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-yellow-600 to-cyan-500 text-white p-2 rounded flex flex-row items-center justify-start w-52">
+            <DirectionsCarIcon sx={{ height: 50, width: 50 }} />
+            <div>
+              <h3 className="text-lg -mb-2">
+                <span>Travel</span>
+              </h3>
+              <span className="text-2xl font-bold">฿{travelTotal}</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-[var(--primary-bg)] to-cyan-500 text-white p-2 rounded flex flex-row items-center justify-start w-52">
+            <AccountBalanceWalletIcon sx={{ height: 50, width: 50 }} />
+            <div>
+              <h3 className="text-lg -mb-2">
+                <span>Total</span>
+              </h3>
+              <span className="text-2xl font-bold">฿{allTotal}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

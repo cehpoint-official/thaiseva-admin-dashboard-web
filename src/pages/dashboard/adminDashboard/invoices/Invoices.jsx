@@ -176,6 +176,7 @@ const Invoices = () => {
   };
 
   const handleDeleteInvoice = (id) => {
+    console.log(id);
     askingForDelete().then(async (result) => {
       if (result.isConfirmed) {
         await deleteDoc(doc(invoicesCollection, id)).then(() => {

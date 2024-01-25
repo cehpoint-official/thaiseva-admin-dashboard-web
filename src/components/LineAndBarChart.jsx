@@ -9,10 +9,10 @@ import {
   PointElement,
   LineElement,
 } from "chart.js";
-import { Bar } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 import { dateCalculator } from "../utils/utils";
 
-const LineChart = ({
+const LineAndBarChart = ({
   title,
   all,
   hotelStatistics,
@@ -49,6 +49,7 @@ const LineChart = ({
   };
 
   const data = {
+    type: chartType,
     labels: all.map((input) => {
       if (input.date) {
         const date = dateCalculator(input.date);
@@ -61,28 +62,28 @@ const LineChart = ({
     }),
     datasets: [
       {
-        type: chartType,
+        // type: chartType,
         label: "Total ",
         borderColor: "#122159",
         data: all.map((input) => input.amount),
         backgroundColor: "#122159",
       },
       {
-        type: chartType,
+        // type: chartType,
         label: "Hotel ",
         data: hotelStatistics.map((input) => input.amount),
         borderColor: "blue",
         backgroundColor: "blue",
       },
       {
-        type: chartType,
+        // type: chartType,
         label: "Local ",
         data: localStatistics.map((input) => input.amount),
         borderColor: "green",
         backgroundColor: "green",
       },
       {
-        type: chartType,
+        // type: chartType,
         label: "Travel ",
         data: travelStatistics.map((input) => input.amount),
         borderColor: "orange",
@@ -90,7 +91,11 @@ const LineChart = ({
       },
     ],
   };
-  return <Bar options={options} data={data} className="w-full h-full" />;
+
+  if (chartType === "line")
+    return <Line options={options} data={data} className="w-full h-full" />;
+  if (chartType === "bar")
+    return <Bar options={options} data={data} className="w-full h-full" />;
 };
 
-export default LineChart;
+export default LineAndBarChart;

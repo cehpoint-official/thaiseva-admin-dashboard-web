@@ -9,6 +9,7 @@ const Main = () => {
     return;
   }
   if (user) {
+    <Navigate to="/dashboard" />;
     return <Outlet />;
   }
   return <Navigate to="/login" />;
