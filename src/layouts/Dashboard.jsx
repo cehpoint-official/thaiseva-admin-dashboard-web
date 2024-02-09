@@ -84,6 +84,7 @@ function Dashboard(props) {
   ];
 
   if (isPartner) {
+    console.log("isPartner", userData?.serviceCategory);
     if (userData?.serviceCategory === "Hotel") {
       partnerNavRoutes[3] = {
         icon: <LocalHotelIcon />,
@@ -99,17 +100,23 @@ function Dashboard(props) {
       userData?.serviceCategory !== "Driving" &&
       userData?.serviceCategory !== "Hotel"
     ) {
+      partnerNavRoutes[1] = {
+        icon: <TaskAltIcon />,
+        url: "",
+        label: "Requirements",
+      };
       partnerNavRoutes[2] = {
         icon: <TaskIcon />,
         url: "/my-services",
         label: "My Services",
       };
     } else {
-      partnerNavRoutes[1] = {
+      console.log("home");
+      partnerNavRoutes.push({
         icon: <TaskAltIcon />,
         url: "",
         label: "Requirements",
-      };
+      });
     }
 
     partnerNavRoutes.push({
