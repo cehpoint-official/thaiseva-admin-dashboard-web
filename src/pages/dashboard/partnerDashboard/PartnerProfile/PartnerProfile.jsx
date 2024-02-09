@@ -1,15 +1,15 @@
-import { useContext, useEffect, useState } from "react";
-import DriverProfile from "../drivers/driverProfile/DriverProfile";
-import LocalPartnerProfile from "../localPartner/localPartnerProfile/LocalPartnerProfile";
-import HotelProfile from "../hotel/hotelProfile/HotelProfile";
-import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
+import { useContext, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { PartnerContext } from "../../../../contextAPIs/PartnerProvider";
 import {
   driversCollection,
   hotelsCollection,
   partnersCollection,
 } from "../../../../firebase/firebase.config";
-import { PartnerContext } from "../../../../contextAPIs/PartnerProvider";
+import DriverProfile from "../drivers/driverProfile/DriverProfile";
+import HotelProfile from "../hotel/hotelProfile/HotelProfile";
+import LocalPartnerProfile from "../localPartner/localPartnerProfile/LocalPartnerProfile";
 
 const PartnerProfile = () => {
   const { refetch } = useContext(PartnerContext);
@@ -34,6 +34,8 @@ const PartnerProfile = () => {
     };
     uid && loadData();
   }, [uid, category, refetch]);
+
+  console.log(partnerDetails);
 
   if (category === "Driving") {
     return <DriverProfile partnerDetails={partnerDetails} />;

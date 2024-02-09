@@ -1,6 +1,7 @@
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useContext, useEffect, useState } from "react";
 
+import CloseIcon from "@mui/icons-material/Close";
 import {
   Box,
   Button,
@@ -13,17 +14,16 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
 import { useForm } from "react-hook-form";
-import { PartnerContext } from "../../../../../contextAPIs/PartnerProvider";
+import { successNotification } from "../../../../../components/Notifications";
+import PageHeading from "../../../../../components/PageHeading";
 import { AuthContext } from "../../../../../contextAPIs/AuthProvider";
+import { PartnerContext } from "../../../../../contextAPIs/PartnerProvider";
 import {
   chatRoomsCollection,
   driversCollection,
   usersCollection,
 } from "../../../../../firebase/firebase.config";
-import PageHeading from "../../../../../components/PageHeading";
-import { successNotification } from "../../../../../components/Notifications";
 import { getFileUrl } from "../../../../../utils/utils";
 
 const DriverProfile = ({ partnerDetails }) => {

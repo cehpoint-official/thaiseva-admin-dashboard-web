@@ -1,6 +1,5 @@
-import { useContext, useState } from "react";
-import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 import CloseIcon from "@mui/icons-material/Close";
+import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 import {
   Box,
   Button,
@@ -25,16 +24,16 @@ import {
   TableRow,
 } from "@mui/material";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { AuthContext } from "../../../../contextAPIs/AuthProvider";
-import { RequirementContext } from "../../../../contextAPIs/RequirementsProvider";
-import PendingPartnership from "../../../../components/PendingPartnership";
-import { requirementsCollection } from "../../../../firebase/firebase.config";
-import PageHeading from "../../../../components/PageHeading";
-import Map from "../../../../components/Map";
-import { successNotification } from "../../../../components/Notifications";
-import { item } from "../../../../utils/utils";
+import { useContext, useState } from "react";
 import { format } from "timeago.js";
 import LoadingContent from "../../../../components/LoadingContent";
+import { successNotification } from "../../../../components/Notifications";
+import PageHeading from "../../../../components/PageHeading";
+import PendingPartnership from "../../../../components/PendingPartnership";
+import { AuthContext } from "../../../../contextAPIs/AuthProvider";
+import { RequirementContext } from "../../../../contextAPIs/RequirementsProvider";
+import { requirementsCollection } from "../../../../firebase/firebase.config";
+import { item } from "../../../../utils/utils";
 
 const MyLocalRequirements = () => {
   const { isVerifiedPartner } = useContext(AuthContext);
@@ -266,13 +265,13 @@ const MyLocalRequirements = () => {
               {item("Description", requirement?.requirementText, true)}
             </Grid>
 
-            <h3 className="text-xl font-bold">Location: </h3>
+            {/* <h3 className="text-xl font-bold">Location: </h3>
             <div className=" w-full h-[300px]">
               <Map
                 isMarkerShown={true}
                 locationURL={requirement?.locationURL}
               />
-            </div>
+            </div> */}
 
             {requirement?.isChecked ? (
               <p className="bg-green-500 text-center py-1 rounded text-white my-3">

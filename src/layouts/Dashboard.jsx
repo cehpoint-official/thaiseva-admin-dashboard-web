@@ -84,7 +84,6 @@ function Dashboard(props) {
   ];
 
   if (isPartner) {
-    console.log("isPartner", userData?.serviceCategory);
     if (userData?.serviceCategory === "Hotel") {
       partnerNavRoutes[3] = {
         icon: <LocalHotelIcon />,
@@ -111,7 +110,6 @@ function Dashboard(props) {
         label: "My Services",
       };
     } else {
-      console.log("home");
       partnerNavRoutes.push({
         icon: <TaskAltIcon />,
         url: "",

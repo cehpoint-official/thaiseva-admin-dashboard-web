@@ -1,6 +1,5 @@
-import { useContext, useState } from "react";
-import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 import CloseIcon from "@mui/icons-material/Close";
+import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 import {
   Box,
   Button,
@@ -25,16 +24,16 @@ import {
   TableRow,
 } from "@mui/material";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { useContext, useState } from "react";
+import { format } from "timeago.js";
+import Loading from "../../../../components/Loading";
+import { successNotification } from "../../../../components/Notifications";
+import PageHeading from "../../../../components/PageHeading";
+import PendingPartnership from "../../../../components/PendingPartnership";
 import { AuthContext } from "../../../../contextAPIs/AuthProvider";
 import { RequirementContext } from "../../../../contextAPIs/RequirementsProvider";
-import PendingPartnership from "../../../../components/PendingPartnership";
 import { travelRequirementsCollection } from "../../../../firebase/firebase.config";
-import Loading from "../../../../components/Loading";
-import PageHeading from "../../../../components/PageHeading";
-import { successNotification } from "../../../../components/Notifications";
-import DirectionMap from "../../../../components/DirectionMap";
 import { item } from "../../../../utils/utils";
-import { format } from "timeago.js";
 
 const MyDrivingRequirements = () => {
   const { isVerifiedPartner } = useContext(AuthContext);
@@ -263,14 +262,14 @@ const MyDrivingRequirements = () => {
               {item("Description", requirement?.requirementText, true)}
             </Grid>
 
-            <h3 className="text-xl font-bold">Location: </h3>
-            <div className=" w-full h-[300px]">
+            {/* <h3 className="text-xl font-bold">Location: </h3> */}
+            {/* <div className=" w-full h-[300px]">
               {/* <Map
                 isMarkerShown={true}
                 locationURL={requirement?.locationURL}
-              /> */}
+              /> 
               <DirectionMap />
-            </div>
+            </div> */}
 
             {requirement?.isChecked ? (
               <p className="bg-green-500 text-center py-1 rounded text-white my-3">
