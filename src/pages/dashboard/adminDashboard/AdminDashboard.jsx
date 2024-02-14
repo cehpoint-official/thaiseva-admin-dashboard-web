@@ -3,6 +3,7 @@ import FoodBanners from "../../../components/FoodBanners";
 import HomeBanners from "../../../components/HomeBanners";
 import HotelBanners from "../../../components/HotelBanners";
 import LocalAssistance from "../../../components/LocalAssistance";
+import NewOfferBanner from "../../../components/NewOffersBanner";
 import PageHeading from "../../../components/PageHeading";
 import TravelBanners from "../../../components/TravelBanners";
 
@@ -19,6 +20,7 @@ const AdminDashboard = () => {
         <HotelBanners />
         <TravelBanners />
         <LocalAssistance />
+        <NewOfferBanner />
       </div>
     </div>
   );
